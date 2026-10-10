@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pargitud video</string>
+
+    <!-- Telefoni seadistusvaade -->
+    <string name="setup_title">Video ainult pargitult</string>
+    <string name="setup_hint">YouTube\'i link või video ID</string>
+    <string name="setup_save">Salvesta</string>
+    <string name="setup_saved">Salvestatud. Ava Android Autos „Pargitud video“.</string>
+    <string name="setup_invalid">Sellest lingist ei leitud YouTube\'i video ID-d.</string>
+    <string name="setup_current">Praegune video: %1$s</string>
+    <string name="setup_none">Videot pole veel valitud.</string>
+    <string name="setup_info">Video käivitub auto ekraanil ainult siis, kui auto on vähemalt 30 sekundit paigal seisnud, ja peatub kohe, kui auto liikuma hakkab. Ilma kiiruseandmeteta videot ei näidata.\n\nPaigaldamine: Android Auto seadetes lülita sisse arendajarežiim (puuduta 10× versiooninumbrit) ja luba arendaja seadetes „Unknown sources“.</string>
+
+    <!-- Auto ekraan -->
+    <string name="car_play">Esita</string>
+    <string name="car_pause">Paus</string>
+    <string name="car_resume">Jätka</string>
+    <string name="car_stop">Stopp</string>
+    <string name="car_locked">Ainult pargitult</string>
+    <string name="car_locked_toast">Video on lubatud ainult siis, kui auto on pargitud.</string>
+    <string name="car_no_video_toast">Vali telefonis rakenduses „Pargitud video“ YouTube\'i video.</string>
+    <string name="car_msg_unknown">Sõidukiiruse andmed puuduvad.\nVideo on lubatud ainult siis, kui auto seisab.</string>
+    <string name="car_msg_no_permission">Kiiruse luba puudub.\nLuba telefonis „Pargitud video“ juurdepääs auto kiirusele.</string>
+    <string name="car_msg_moving">Sõidu ajal videot ei näidata.</string>
+    <string name="car_msg_waiting">Auto seisab.\nVideo saab käivitada, kui auto on %1$d s paigal olnud.</string>
+    <string name="car_msg_parked">Auto on pargitud.\nVajuta „Esita“.</string>
+    <string name="car_msg_parked_no_video">Auto on pargitud.\nVali telefonis YouTube\'i video.</string>
+</resources>
