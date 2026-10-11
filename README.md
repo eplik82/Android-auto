@@ -48,14 +48,42 @@ Google Play sellist rakendust ei luba (video on Android Autos keelatud ja
 rakendus kasutab kuvamiseks navigatsioonirakenduse pinda), seega paigaldatakse
 see isiklikuks kasutuseks käsitsi:
 
-1. Laadi APK alla GitHub Actionsi viimase „Build APK“ käivituse alt
-   (artefakt `pargitud-video-debug-apk`) või ehita ise:
-   `./gradlew assembleDebug`.
+1. Laadi APK alla GitHubi **Releases** lehelt (`pargitud-video-vX.Y.Z.apk`).
+   Arendusversiooni leiad viimase „Build APK“ käivituse alt (artefakt
+   `pargitud-video-debug-apk`).
 2. Paigalda APK telefoni.
 3. Ava telefonis Android Auto seaded, puuduta 10 korda versiooninumbrit ja
    lülita arendaja seadetes sisse **Unknown sources**.
 4. Ühenda telefon autoga. „Pargitud video“ ilmub rakenduste loendisse.
    Esimesel käivitamisel küsitakse telefonis luba lugeda auto kiirust.
+
+## Uue versiooni väljaandmine
+
+Lükka üles silt kujul `v1.2.3`:
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Töövoog „Release APK“ ehitab release-APK ja lisab selle GitHubi releasele.
+
+### Püsiv allkirjastamisvõti (soovitatav)
+
+Ilma võtmeta allkirjastatakse APK debug-võtmega, mis on igal ehitusel erinev.
+Siis ei saa uut versiooni vana peale paigaldada, vaid vana tuleb enne eemaldada.
+Püsiva võtme seadistamiseks:
+
+```sh
+keytool -genkeypair -v -keystore release.jks -alias pargitud-video \
+  -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 release.jks   # kopeeri väljund
+```
+
+Lisa GitHubis **Settings → Secrets and variables → Actions** alla:
+`RELEASE_KEYSTORE_BASE64` (base64 väljund), `RELEASE_KEYSTORE_PASSWORD`,
+`RELEASE_KEY_ALIAS` (`pargitud-video`) ja `RELEASE_KEY_PASSWORD`.
+Hoia `release.jks` ja paroolid alles, aga ära lisa neid repositooriumi.
 
 ## Struktuur
 

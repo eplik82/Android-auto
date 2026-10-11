@@ -1,0 +1,55 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+            echo "RELEASE_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "note=Allkirjastatud püsiva release-võtmega." >> "$GITHUB_OUTPUT"
+          else
+            echo "note=⚠️ Allkirjastatud debug-võtmega (release-võtme saladusi pole seadistatud). Uuendamiseks võib olla vaja eelmine versioon enne eemaldada." >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release APK
+        env:
+          VERSION_NAME: ${{ github.ref_name }}
+          VERSION_CODE: ${{ github.run_number }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          export VERSION_NAME="${VERSION_NAME#v}"
+          ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "pargitud-video-${GITHUB_REF_NAME}.apk"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: pargitud-video-${{ github.ref_name }}.apk
+          body: |
+            **Pargitud video ${{ github.ref_name }}**: YouTube'i video ja veebibrauser Android Autos ainult pargitult.
+
+            Paigaldamine: laadi alla `pargitud-video-${{ github.ref_name }}.apk`, paigalda telefoni ja luba Android Auto arendaja seadetes „Unknown sources“. Täpsemalt vt README.
+
+            ${{ steps.signing.outputs.note }}
