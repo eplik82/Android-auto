@@ -46,6 +46,8 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.test_stationary_button).setOnClickListener { setSimulation(SimulatedMotion.STATIONARY) }
         findViewById<Button>(R.id.test_off_button).setOnClickListener { setSimulation(SimulatedMotion.OFF) }
         showSimulation()
+        findViewById<TextView>(R.id.compat_text).text =
+            CompatibilityReport.build(this) + "\n\n" + getString(R.string.compat_hint)
 
         if (savedInstanceState == null) loadFields()
         handleShare(intent)
@@ -85,6 +87,8 @@ class MainActivity : Activity() {
     private fun setSimulation(motion: SimulatedMotion) {
         settings.simulatedMotion = motion
         showSimulation()
+        findViewById<TextView>(R.id.compat_text).text =
+            CompatibilityReport.build(this) + "\n\n" + getString(R.string.compat_hint)
     }
 
     private fun showSimulation() {

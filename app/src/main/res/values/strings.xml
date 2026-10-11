@@ -36,6 +36,15 @@
     <string name="test_status_moving">Test: telefon liigub.</string>
     <string name="test_status_stationary">Test: telefon seisab.</string>
 
+    <!-- Android Auto ühilduvus -->
+    <string name="compat_label">Android Auto ühilduvus</string>
+    <string name="compat_yes">jah</string>
+    <string name="compat_no">ei</string>
+    <string name="compat_missing">pole paigaldatud</string>
+    <string name="compat_unknown">teadmata</string>
+    <string name="compat_report">Android Auto: %1$s\nAndroid Auto teenus nähtav: %2$s\nKategooria: %3$s\nRakenduse versioon: %4$s (%5$s)\nSilutav (debug): %6$s\nPaigaldaja: %7$s\nAndroid: %8$s (API %9$d)</string>
+    <string name="compat_hint">Kui teenus on nähtav, aga Android Auto rakendust ei näita, on põhjus Android Auto seadetes (Unknown sources, telefoni taaskäivitus). Seda teksti saab kopeerida ja saata.</string>
+
     <!-- Auto ekraan -->
     <string name="car_play">Video</string>
     <string name="car_browser">Brauser</string>

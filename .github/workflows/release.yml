@@ -49,17 +49,22 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           export VERSION_NAME="${TAG#v}"
-          ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+          ./gradlew --no-daemon testReleaseUnitTest assembleRelease assembleDebug
           cp app/build/outputs/apk/release/app-release.apk "pargitud-video-${TAG}.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "pargitud-video-${TAG}-debug.apk"
 
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
-          files: pargitud-video-${{ env.TAG }}.apk
+          files: |
+            pargitud-video-${{ env.TAG }}.apk
+            pargitud-video-${{ env.TAG }}-debug.apk
           body: |
             **Pargitud video ${{ env.TAG }}**: YouTube'i video ja veebibrauser Android Autos ainult pargitult.
 
             Paigaldamine: laadi alla `pargitud-video-${{ env.TAG }}.apk`, paigalda telefoni ja luba Android Auto arendaja seadetes „Unknown sources“. Täpsemalt vt README.
+
+            `-debug.apk` on silumisversioon testimiseks (nt kui tavaline versioon Android Autos ei ilmu). Mõlemal on sama paketinimi: paigalda korraga ainult üks.
 
             ${{ steps.signing.outputs.note }}
