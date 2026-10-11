@@ -15,18 +15,29 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 
-/** Auto ekraani pinnale joonistatav sisu: kas teade või YouTube'i mängija. */
-class VideoPresentation(
+/** Auto ekraani pinnale joonistatav sisu: teade, YouTube'i mängija või veebileht. */
+class SurfacePresentation(
     context: Context,
     display: Display,
+    private val dark: Boolean,
     private val surfaceWidth: Int,
     private val surfaceHeight: Int,
-) : Presentation(context, display) {
+) : Presentation(
+    context,
+    display,
+    if (dark) android.R.style.Theme_Material_NoActionBar_Fullscreen
+    else android.R.style.Theme_Material_Light_NoActionBar_Fullscreen,
+) {
+    private val backgroundColor = if (dark) Color.BLACK else Color.rgb(0xF5, 0xF5, 0xF5)
+    private val textColor = if (dark) Color.WHITE else Color.rgb(0x20, 0x21, 0x24)
 
     private lateinit var root: FrameLayout
     private lateinit var message: TextView
@@ -34,10 +45,10 @@ class VideoPresentation(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
-        root = FrameLayout(context).apply { setBackgroundColor(Color.BLACK) }
+        window?.setBackgroundDrawable(ColorDrawable(backgroundColor))
+        root = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
         message = TextView(context).apply {
-            setTextColor(Color.WHITE)
+            setTextColor(textColor)
             textSize = 26f
             gravity = Gravity.CENTER
             setPadding(48, 48, 48, 48)
@@ -62,28 +73,28 @@ class VideoPresentation(
         message.visibility = View.VISIBLE
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
     fun showVideo(videoId: String) {
-        message.visibility = View.GONE
-        val view = webView ?: WebView(context).also { view ->
-            view.setBackgroundColor(Color.BLACK)
-            view.settings.javaScriptEnabled = true
-            view.settings.domStorageEnabled = true
-            view.settings.mediaPlaybackRequiresUserGesture = false
-            view.webViewClient = WebViewClient()
-            view.webChromeClient = WebChromeClient()
-            root.addView(view, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-            webView = view
-        }
         val origin = "https://${context.packageName}"
-        view.loadDataWithBaseURL(origin, playerHtml(videoId, origin), "text/html", "utf-8", null)
+        newWebView().loadDataWithBaseURL(origin, playerHtml(videoId, origin), "text/html", "utf-8", null)
+    }
+
+    fun showWeb(url: String) {
+        newWebView().loadUrl(url)
+    }
+
+    fun goBack() {
+        webView?.takeIf { it.canGoBack() }?.goBack()
+    }
+
+    fun scrollBy(distanceX: Float, distanceY: Float) {
+        webView?.scrollBy(distanceX.toInt(), distanceY.toInt())
     }
 
     fun pause() = command("pauseVideo")
 
     fun resume() = command("playVideo")
 
-    /** Edastab auto puuteekraani puudutuse mängijale (nt YouTube'i nupud). */
+    /** Edastab auto puuteekraani puudutuse veebivaatele (lingid, YouTube'i nupud). */
     fun dispatchTap(x: Float, y: Float) {
         val downTime = SystemClock.uptimeMillis()
         for (action in intArrayOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
@@ -101,6 +112,43 @@ class VideoPresentation(
 
     private fun command(func: String) {
         webView?.evaluateJavascript("cmd('$func')", null)
+    }
+
+    /** Iga uus sisu saab puhta veebivaate, et eelmise sisu ajalugu ja heli ei jääks alles. */
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun newWebView(): WebView {
+        destroyWebView()
+        message.visibility = View.GONE
+        val view = WebView(context)
+        view.setBackgroundColor(backgroundColor)
+        view.settings.javaScriptEnabled = true
+        view.settings.domStorageEnabled = true
+        view.settings.mediaPlaybackRequiresUserGesture = false
+        applyDarkMode(view)
+        view.webViewClient = object : WebViewClient() {
+            // Ainult veebilehed: intent:// jms ei tohi telefonis teisi rakendusi avada.
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                request.url.scheme !in setOf("http", "https")
+        }
+        view.webChromeClient = WebChromeClient()
+        root.addView(view, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        webView = view
+        return view
+    }
+
+    private fun applyDarkMode(view: WebView) {
+        // Android 13+: tume teema lubab lehtedel prefers-color-scheme: dark ja vajadusel automaatse tumenduse.
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(view.settings, dark)
+        }
+        // Vanemad WebView versioonid.
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+            @Suppress("DEPRECATION")
+            WebSettingsCompat.setForceDark(
+                view.settings,
+                if (dark) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF,
+            )
+        }
     }
 
     private fun destroyWebView() {

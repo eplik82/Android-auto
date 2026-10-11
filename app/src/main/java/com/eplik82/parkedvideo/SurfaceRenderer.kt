@@ -8,45 +8,40 @@ import androidx.car.app.SurfaceCallback
 import androidx.car.app.SurfaceContainer
 
 /**
- * Võtab Android Autolt joonistuspinna ja kuvab sellel [VideoPresentation]-i
- * virtuaalse ekraani kaudu. Hoiab meeles, mida peab näitama, et pinna
- * taasloomisel (nt ekraani suuruse muutus) sisu taastuks.
+ * Võtab Android Autolt joonistuspinna ja kuvab sellel [SurfacePresentation]-i
+ * virtuaalse ekraani kaudu. Hoiab meeles, mida peab näitama, et pinna või
+ * teema vahetusel sisu taastuks.
  */
-class VideoSurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
+class SurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
 
     private sealed interface Content {
         data class Message(val text: String) : Content
         data class Video(val videoId: String) : Content
+        data class Web(val url: String) : Content
     }
 
     private var content: Content = Content.Message("")
+    private var dark = true
     private var virtualDisplay: VirtualDisplay? = null
-    private var presentation: VideoPresentation? = null
+    private var presentation: SurfacePresentation? = null
+    private var surfaceWidth = 0
+    private var surfaceHeight = 0
     private var visibleArea: Rect? = null
 
     override fun onSurfaceAvailable(surfaceContainer: SurfaceContainer) {
         val surface = surfaceContainer.surface ?: return
         release()
-        val displayManager = carContext.getSystemService(DisplayManager::class.java)
-        val display = displayManager.createVirtualDisplay(
+        surfaceWidth = surfaceContainer.width
+        surfaceHeight = surfaceContainer.height
+        virtualDisplay = carContext.getSystemService(DisplayManager::class.java).createVirtualDisplay(
             "ParkedVideo",
-            surfaceContainer.width,
-            surfaceContainer.height,
+            surfaceWidth,
+            surfaceHeight,
             surfaceContainer.dpi,
             surface,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY,
         )
-        virtualDisplay = display
-        presentation = VideoPresentation(
-            carContext,
-            display.display,
-            surfaceContainer.width,
-            surfaceContainer.height,
-        ).also {
-            it.show()
-            visibleArea?.let(it::setVisibleArea)
-        }
-        render()
+        createPresentation()
     }
 
     override fun onSurfaceDestroyed(surfaceContainer: SurfaceContainer) = release()
@@ -57,7 +52,17 @@ class VideoSurfaceRenderer(private val carContext: CarContext) : SurfaceCallback
     }
 
     override fun onClick(x: Float, y: Float) {
-        if (content is Content.Video) presentation?.dispatchTap(x, y)
+        if (content !is Content.Message) presentation?.dispatchTap(x, y)
+    }
+
+    override fun onScroll(distanceX: Float, distanceY: Float) {
+        if (content is Content.Web) presentation?.scrollBy(distanceX, distanceY)
+    }
+
+    fun setDarkMode(dark: Boolean) {
+        if (this.dark == dark) return
+        this.dark = dark
+        createPresentation()
     }
 
     fun showMessage(text: String) {
@@ -71,6 +76,13 @@ class VideoSurfaceRenderer(private val carContext: CarContext) : SurfaceCallback
         render()
     }
 
+    fun openWeb(url: String) {
+        content = Content.Web(url)
+        render()
+    }
+
+    fun goBack() = presentation?.goBack()
+
     fun pause() = presentation?.pause()
 
     fun resume() = presentation?.resume()
@@ -82,11 +94,23 @@ class VideoSurfaceRenderer(private val carContext: CarContext) : SurfaceCallback
         virtualDisplay = null
     }
 
+    private fun createPresentation() {
+        presentation?.dismiss()
+        presentation = null
+        val display = virtualDisplay?.display ?: return
+        presentation = SurfacePresentation(carContext, display, dark, surfaceWidth, surfaceHeight).also {
+            it.show()
+            visibleArea?.let(it::setVisibleArea)
+        }
+        render()
+    }
+
     private fun render() {
         val target = presentation ?: return
         when (val c = content) {
             is Content.Message -> target.showMessage(c.text)
             is Content.Video -> target.showVideo(c.videoId)
+            is Content.Web -> target.showWeb(c.url)
         }
     }
 }

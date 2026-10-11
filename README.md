@@ -1,18 +1,30 @@
 # Pargitud video
 
-Android Auto rakendus, millega kaasreisija saab vaadata YouTube'i videot auto
-ekraanilt, **kuid ainult siis, kui auto on pargitud**.
+Android Auto rakendus, millega kaasreisija saab vaadata YouTube'i videot või
+sirvida veebi auto ekraanilt, **kuid ainult siis, kui auto on pargitud**.
 
 ## Kuidas see töötab
 
 - Telefonis valitakse video: kleebi link rakendusse „Pargitud video“ või
   jaga see YouTube'ist (Jaga → Pargitud video).
-- Auto ekraanil saab nupu „Esita“ vajutada alles siis, kui auto on
-  vähemalt **30 sekundit** katkematult paigal seisnud. Lühike peatus, näiteks
-  foori taga, ei avata videot.
-- Kui auto hakkab liikuma (üle ~1 km/h), suletakse mängija kohe koos heliga.
-  Uuesti pargituna tuleb video jälle käsitsi käivitada.
-- Kui auto kiiruseandmeid pole või luba puudub, videot ei näidata.
+- Auto ekraanil ilmuvad nupud „Video“ ja „Brauser“ alles siis, kui auto on
+  seadetes määratud aja (vaikimisi **30 s**, lubatud 30–600 s) katkematult
+  paigal seisnud. Lühike peatus, näiteks foori taga, neid ei ava.
+- Brauser avab seadetes määratud avalehe. Lehel saab puudutada linke ja
+  kerida, nupp „Tagasi“ liigub eelmisele lehele. Teksti saab sisestada ainult
+  telefonis (avalehe aadress), sest auto ekraanil klaviatuuri pole.
+- Kui auto hakkab liikuma (üle ~1 km/h), suletakse video või brauser kohe
+  koos heliga. Uuesti pargituna tuleb need jälle käsitsi avada.
+- Kui auto kiiruseandmeid pole või luba puudub, midagi ei näidata.
+
+## Seaded (telefonis)
+
+| Seade | Selgitus |
+| --- | --- |
+| YouTube'i video | Link või video ID; saab ka YouTube'ist jagada |
+| Brauseri avaleht | Nt `www.google.com` |
+| Paigalseismise aeg | 30–600 sekundit enne video/brauseri lubamist |
+| Päeva/öö režiim | Automaatne (auto järgi, nt esitulede sisselülitamisel), Päev või Öö. Mõjutab auto ekraani teateid, veebilehti (tume teema toega lehed) ja telefoni seadete vaadet |
 
 Android Auto ei anna rakendustele käigu- ega seisupiduri infot, seega
 otsustatakse pargitud olek ainult kiiruse järgi. Kasuta rakendust ainult
@@ -38,8 +50,9 @@ see isiklikuks kasutuseks käsitsi:
 | Fail | Ülesanne |
 | --- | --- |
 | `ParkedVideoService.kt` | Android Auto teenus ja sessioon |
-| `VideoScreen.kt` | Auto ekraan, nupud ja pargitud oleku reeglid |
+| `ParkedScreen.kt` | Auto ekraan, nupud ja pargitud oleku reeglid |
 | `ParkingMonitor.kt` | Kiiruse jälgimine → `MOVING` / `STOPPED` / `PARKED` |
-| `VideoSurfaceRenderer.kt` | Auto ekraani pind → virtuaalne ekraan |
-| `VideoPresentation.kt` | Teade või YouTube'i mängija (WebView) |
-| `MainActivity.kt` | Telefoni vaade video valimiseks |
+| `SurfaceRenderer.kt` | Auto ekraani pind → virtuaalne ekraan, päeva/öö teema |
+| `SurfacePresentation.kt` | Teade, YouTube'i mängija või veebileht (WebView) |
+| `AppSettings.kt`, `SettingsInput.kt` | Seaded ja nende kontroll |
+| `MainActivity.kt` | Telefoni seadete vaade |

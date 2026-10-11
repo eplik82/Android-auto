@@ -1,5 +1,6 @@
 package com.eplik82.parkedvideo
 
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import androidx.car.app.AppManager
 import androidx.car.app.CarContext
@@ -13,49 +14,71 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
 /**
- * Android Auto ekraan. Video käivitub ainult nupuvajutusega ja ainult siis,
- * kui [ParkingMonitor] loeb auto pargituks; liikuma hakates peatatakse
- * video kohe ja mängija suletakse täielikult (ka heli).
+ * Android Auto ekraan. Video ja brauser avanevad ainult nupuvajutusega ja
+ * ainult siis, kui [ParkingMonitor] loeb auto pargituks; liikuma hakates
+ * suletakse need kohe täielikult (ka heli).
  *
  * Kasutatakse alati NavigationTemplate'i, et mallivahetused ei kuluks
  * Android Auto sammulimiidi arvelt – teated joonistatakse pinnale.
  */
-class VideoScreen(carContext: CarContext) : Screen(carContext) {
+class ParkedScreen(carContext: CarContext) : Screen(carContext) {
 
-    private val prefs = VideoPrefs(carContext)
-    private val renderer = VideoSurfaceRenderer(carContext)
-    private val monitor = ParkingMonitor(carContext, STATIONARY_MILLIS) { onParkingChanged() }
+    private enum class Mode { IDLE, VIDEO, WEB }
+
+    private val settings = AppSettings(carContext)
+    private val renderer = SurfaceRenderer(carContext)
+    private val monitor = ParkingMonitor(carContext, { settings.stationarySeconds * 1000L }) { onParkingChanged() }
+    private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        applyTheme()
+        refresh()
+    }
 
     private var permissionDenied = false
-    private var playing = false
+    private var mode = Mode.IDLE
     private var paused = false
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onCreate(owner: LifecycleOwner) {
                 carContext.getCarService(AppManager::class.java).setSurfaceCallback(renderer)
+                settings.registerListener(settingsListener)
+                applyTheme()
                 startMonitoring()
                 refresh()
             }
 
             override fun onDestroy(owner: LifecycleOwner) {
+                settings.unregisterListener(settingsListener)
                 monitor.stop()
                 renderer.release()
             }
         })
     }
 
+    /** Päeva/öö režiim: seadetest või AUTO puhul auto enda järgi (nt esitulede sisselülitamisel). */
+    fun applyTheme() = renderer.setDarkMode(settings.isDark(carContext.isDarkMode))
+
     override fun onGetTemplate(): Template {
         val actions = ActionStrip.Builder()
+        val template = NavigationTemplate.Builder()
         when {
-            playing -> {
+            mode == Mode.VIDEO -> {
                 actions.addAction(action(if (paused) R.string.car_resume else R.string.car_pause) { togglePause() })
-                actions.addAction(action(R.string.car_stop) { stopVideo() })
+                actions.addAction(action(R.string.car_stop) { close() })
             }
-            monitor.state == ParkingState.PARKED -> actions.addAction(action(R.string.car_play) { startVideo() })
+            mode == Mode.WEB -> {
+                actions.addAction(action(R.string.car_back) { renderer.goBack() })
+                actions.addAction(action(R.string.car_close) { close() })
+                // PAN lubab lehte auto ekraanil kerida.
+                template.setMapActionStrip(ActionStrip.Builder().addAction(Action.PAN).build())
+            }
+            monitor.state == ParkingState.PARKED -> {
+                actions.addAction(action(R.string.car_play) { startVideo() })
+                actions.addAction(action(R.string.car_browser) { openBrowser() })
+            }
             else -> actions.addAction(action(R.string.car_locked) { toast(R.string.car_locked_toast) })
         }
-        return NavigationTemplate.Builder().setActionStrip(actions.build()).build()
+        return template.setActionStrip(actions.build()).build()
     }
 
     private fun startMonitoring() {
@@ -72,25 +95,35 @@ class VideoScreen(carContext: CarContext) : Screen(carContext) {
 
     private fun onParkingChanged() {
         if (monitor.state != ParkingState.PARKED) {
-            playing = false
+            mode = Mode.IDLE
             paused = false
         }
         refresh()
     }
 
+    private fun isParkedOrWarn(): Boolean {
+        if (monitor.state == ParkingState.PARKED) return true
+        toast(R.string.car_locked_toast)
+        return false
+    }
+
     private fun startVideo() {
-        if (monitor.state != ParkingState.PARKED) {
-            toast(R.string.car_locked_toast)
-            return
-        }
-        val videoId = prefs.videoId
+        if (!isParkedOrWarn()) return
+        val videoId = settings.videoId
         if (videoId == null) {
             toast(R.string.car_no_video_toast)
             return
         }
-        playing = true
+        mode = Mode.VIDEO
         paused = false
         renderer.playVideo(videoId)
+        invalidate()
+    }
+
+    private fun openBrowser() {
+        if (!isParkedOrWarn()) return
+        mode = Mode.WEB
+        renderer.openWeb(settings.homeUrl)
         invalidate()
     }
 
@@ -100,15 +133,15 @@ class VideoScreen(carContext: CarContext) : Screen(carContext) {
         invalidate()
     }
 
-    private fun stopVideo() {
-        playing = false
+    private fun close() {
+        mode = Mode.IDLE
         paused = false
         refresh()
     }
 
-    /** Näitab olekuteadet, kui video parasjagu ei mängi, ja uuendab nuppe. */
+    /** Näitab olekuteadet, kui midagi parasjagu avatud pole, ja uuendab nuppe. */
     private fun refresh() {
-        if (!playing) renderer.showMessage(statusMessage())
+        if (mode == Mode.IDLE) renderer.showMessage(statusMessage())
         invalidate()
     }
 
@@ -116,10 +149,8 @@ class VideoScreen(carContext: CarContext) : Screen(carContext) {
         ParkingState.UNKNOWN ->
             carContext.getString(if (permissionDenied) R.string.car_msg_no_permission else R.string.car_msg_unknown)
         ParkingState.MOVING -> carContext.getString(R.string.car_msg_moving)
-        ParkingState.STOPPED ->
-            carContext.getString(R.string.car_msg_waiting, (monitor.stationaryMillis / 1000).toInt())
-        ParkingState.PARKED ->
-            carContext.getString(if (prefs.videoId == null) R.string.car_msg_parked_no_video else R.string.car_msg_parked)
+        ParkingState.STOPPED -> carContext.getString(R.string.car_msg_waiting, settings.stationarySeconds)
+        ParkingState.PARKED -> carContext.getString(R.string.car_msg_parked)
     }
 
     private fun action(title: Int, onClick: () -> Unit): Action =
@@ -129,6 +160,5 @@ class VideoScreen(carContext: CarContext) : Screen(carContext) {
 
     private companion object {
         const val CAR_SPEED = "com.google.android.gms.permission.CAR_SPEED"
-        const val STATIONARY_MILLIS = 30_000L
     }
 }

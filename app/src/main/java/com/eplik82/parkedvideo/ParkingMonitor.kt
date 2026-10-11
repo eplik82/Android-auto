@@ -16,18 +16,19 @@ enum class ParkingState {
     MOVING,
     /** Auto seisab, kuid veel liiga lühikest aega (nt foori taga). */
     STOPPED,
-    /** Auto on seisnud vähemalt [ParkingMonitor.stationaryMillis]. */
+    /** Auto on seisnud vähemalt seadetes määratud aja. */
     PARKED,
 }
 
 /**
  * Jälgib auto kiirust. Android Auto ei anna rakendustele käigu- ega
  * seisupiduri andmeid, seega loetakse auto pargituks alles siis, kui see on
- * katkematult seisnud [stationaryMillis]. Vähimgi liikumine katkestab kohe.
+ * katkematult seisnud [stationaryMillis] (loetakse seisma jäämise hetkel).
+ * Vähimgi liikumine katkestab kohe.
  */
 class ParkingMonitor(
     private val carContext: CarContext,
-    val stationaryMillis: Long,
+    private val stationaryMillis: () -> Long,
     private val onChange: (ParkingState) -> Unit,
 ) {
     var state = ParkingState.UNKNOWN
@@ -74,7 +75,7 @@ class ParkingMonitor(
         }
         if (state == ParkingState.STOPPED || state == ParkingState.PARKED) return
         update(ParkingState.STOPPED)
-        handler.postDelayed(promoteToParked, stationaryMillis)
+        handler.postDelayed(promoteToParked, stationaryMillis())
     }
 
     private fun update(newState: ParkingState) {

@@ -2,6 +2,7 @@ package com.eplik82.parkedvideo
 
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.res.Configuration
 import androidx.car.app.CarAppService
 import androidx.car.app.Screen
 import androidx.car.app.Session
@@ -17,7 +18,16 @@ class ParkedVideoService : CarAppService() {
                 .build()
         }
 
-    override fun onCreateSession(): Session = object : Session() {
-        override fun onCreateScreen(intent: Intent): Screen = VideoScreen(carContext)
+    override fun onCreateSession(): Session = ParkedSession()
+}
+
+private class ParkedSession : Session() {
+    private var screen: ParkedScreen? = null
+
+    override fun onCreateScreen(intent: Intent): Screen = ParkedScreen(carContext).also { screen = it }
+
+    /** Auto vahetab päeva- ja öörežiimi (carContext.isDarkMode). */
+    override fun onCarConfigurationChanged(newConfiguration: Configuration) {
+        screen?.applyTheme()
     }
 }
