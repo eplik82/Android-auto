@@ -3,11 +3,6 @@ package com.eplik82.parkedvideo
 import android.os.Handler
 import android.os.Looper
 import androidx.car.app.CarContext
-import androidx.car.app.hardware.CarHardwareManager
-import androidx.car.app.hardware.common.CarValue
-import androidx.car.app.hardware.common.OnCarDataAvailableListener
-import androidx.car.app.hardware.info.Speed
-import androidx.core.content.ContextCompat
 
 enum class ParkingState {
     /** Kiiruseandmeid pole – käsitletakse nagu sõitu. */
@@ -24,11 +19,8 @@ enum class SimulatedMotion { OFF, MOVING, STATIONARY }
 
 /** Otsus, millist kiirust arvestada; eraldi, et seda saaks ilma autota testida. */
 object MotionRules {
-    /** ~1 km/h – sellest kiiremini liikuv auto ei ole pargitud. */
-    const val STATIONARY_SPEED_MPS = 0.3f
-
     /**
-     * @param realSpeed auto tegelik kiirus (m/s) või null, kui see pole teada
+     * @param realSpeed tegelik kiirus (m/s) või null, kui see pole teada
      * @param speedAccess kas rakendusel on luba ja kiiruse kuulamine käib
      * @return arvestatav kiirus või null (= teadmata, videot ei näidata)
      */
@@ -37,26 +29,41 @@ object MotionRules {
         simulation == SimulatedMotion.MOVING -> Float.MAX_VALUE
         // Päris kiirus on alati tähtsam kui „seisab“-test.
         realSpeed != null -> realSpeed
-        // „Seisab“-test ainult siis, kui luba on olemas, aga auto kiirust ei anna (nt DHU emulaator).
+        // „Seisab“-test ainult siis, kui luba on olemas, aga kiirust ei tule (nt DHU emulaator).
         simulation == SimulatedMotion.STATIONARY && speedAccess -> 0f
         else -> null
     }
 
-    fun isStationary(speed: Float): Boolean = kotlin.math.abs(speed) <= STATIONARY_SPEED_MPS
+    fun isStationary(speed: Float, thresholdMps: Float): Boolean = kotlin.math.abs(speed) <= thresholdMps
 }
 
 /**
- * Jälgib auto kiirust. Android Auto ei anna rakendustele käigu- ega
- * seisupiduri andmeid, seega loetakse auto pargituks alles siis, kui see on
- * katkematult seisnud [stationaryMillis] (loetakse seisma jäämise hetkel).
- * Vähimgi liikumine katkestab kohe.
+ * Jälgib valitud allika ([SpeedSourceType]) kiirust. Android Auto ei anna
+ * rakendustele käigu- ega seisupiduri andmeid, seega loetakse auto
+ * pargituks alles siis, kui see on katkematult seisnud [stationaryMillis]
+ * (loetakse seisma jäämise hetkel). Vähimgi liikumine katkestab kohe.
+ *
+ * [onStateChange] kutsutakse oleku muutumisel, [onSpeedUpdate] iga uue
+ * kiiruse lugemi järel (ekraanil kuvamiseks).
  */
 class ParkingMonitor(
     private val carContext: CarContext,
     private val stationaryMillis: () -> Long,
-    private val onChange: (ParkingState) -> Unit,
+    private val onStateChange: () -> Unit,
+    private val onSpeedUpdate: () -> Unit,
 ) {
     var state = ParkingState.UNKNOWN
+        private set
+
+    var sourceType = SpeedSourceType.CAR
+        private set
+
+    /** Kas valitud allikas töötab (luba olemas ja kuulamine käib). */
+    var hasAccess = false
+        private set
+
+    /** Viimane tegelik kiirus m/s või null. */
+    var realSpeed: Float? = null
         private set
 
     /** Testrežiim telefoni seadetest; vt [MotionRules.effectiveSpeed]. */
@@ -67,52 +74,49 @@ class ParkingMonitor(
             evaluate()
         }
 
-    /** „Seisab“-test on sisse lülitatud, kuid auto annab päris kiiruse, seega seda eiratakse. */
+    /** „Seisab“-test on sisse lülitatud, kuid allikas annab päris kiiruse, seega seda eiratakse. */
     val simulationIgnored: Boolean
         get() = simulation == SimulatedMotion.STATIONARY && realSpeed != null
 
-    private var realSpeed: Float? = null
-    private var listening = false
+    private var source: SpeedSource? = null
     private val handler = Handler(Looper.getMainLooper())
     private val promoteToParked = Runnable { if (state == ParkingState.STOPPED) update(ParkingState.PARKED) }
-    private val listener = OnCarDataAvailableListener<Speed> { onSpeed(it) }
 
-    private val carInfo
-        get() = carContext.getCarService(CarHardwareManager::class.java).carInfo
-
-    fun start() {
-        if (listening) return
-        try {
-            carInfo.addSpeedListener(ContextCompat.getMainExecutor(carContext), listener)
-            listening = true
-        } catch (e: SecurityException) {
-            listening = false
+    /** (Taas)käivitab jälgimise valitud allikaga; allika vahetus nõuab uuesti ooteaega. */
+    fun start(type: SpeedSourceType) {
+        stop()
+        sourceType = type
+        val newSource = when (type) {
+            SpeedSourceType.CAR -> CarSpeedSource(carContext, ::onSpeed)
+            SpeedSourceType.GPS -> GpsSpeedSource(carContext, ::onSpeed)
         }
+        hasAccess = newSource.start()
+        source = newSource.takeIf { hasAccess }
         evaluate()
     }
 
     fun stop() {
-        if (listening) {
-            carInfo.removeSpeedListener(listener)
-            listening = false
-        }
+        source?.stop()
+        source = null
+        hasAccess = false
+        realSpeed = null
         handler.removeCallbacks(promoteToParked)
     }
 
-    private fun onSpeed(speed: Speed) {
-        val raw = speed.rawSpeedMetersPerSecond
-        realSpeed = raw.value.takeIf { raw.status == CarValue.STATUS_SUCCESS }
+    private fun onSpeed(speed: Float?) {
+        realSpeed = speed
         evaluate()
+        onSpeedUpdate()
     }
 
     private fun evaluate() {
-        val speed = MotionRules.effectiveSpeed(simulation, realSpeed, listening)
+        val speed = MotionRules.effectiveSpeed(simulation, realSpeed, hasAccess)
         when {
             speed == null -> {
                 handler.removeCallbacks(promoteToParked)
                 update(ParkingState.UNKNOWN)
             }
-            !MotionRules.isStationary(speed) -> {
+            !MotionRules.isStationary(speed, sourceType.stationaryThresholdMps) -> {
                 handler.removeCallbacks(promoteToParked)
                 update(ParkingState.MOVING)
             }
@@ -126,6 +130,6 @@ class ParkingMonitor(
     private fun update(newState: ParkingState) {
         if (newState == state) return
         state = newState
-        onChange(newState)
+        onStateChange()
     }
 }

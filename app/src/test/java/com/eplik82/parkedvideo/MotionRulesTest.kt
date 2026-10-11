@@ -16,9 +16,9 @@ class MotionRulesTest {
     @Test
     fun simulatedMovingAlwaysWins() {
         val parkedCar = MotionRules.effectiveSpeed(SimulatedMotion.MOVING, 0f, speedAccess = true)!!
-        assertFalse(MotionRules.isStationary(parkedCar))
+        assertFalse(MotionRules.isStationary(parkedCar, 0.3f))
         val noData = MotionRules.effectiveSpeed(SimulatedMotion.MOVING, null, speedAccess = false)!!
-        assertFalse(MotionRules.isStationary(noData))
+        assertFalse(MotionRules.isStationary(noData, 1.0f))
     }
 
     @Test
@@ -35,9 +35,12 @@ class MotionRulesTest {
 
     @Test
     fun stationaryThreshold() {
-        assertTrue(MotionRules.isStationary(0f))
-        assertTrue(MotionRules.isStationary(0.3f))
-        assertFalse(MotionRules.isStationary(0.31f))
-        assertFalse(MotionRules.isStationary(-1f))
+        assertTrue(MotionRules.isStationary(0f, 0.3f))
+        assertTrue(MotionRules.isStationary(0.3f, 0.3f))
+        assertFalse(MotionRules.isStationary(0.31f, 0.3f))
+        assertFalse(MotionRules.isStationary(-1f, 0.3f))
+        // GPS-i lubatud kõikumine.
+        assertTrue(MotionRules.isStationary(0.8f, 1.0f))
+        assertFalse(MotionRules.isStationary(1.2f, 1.0f))
     }
 }

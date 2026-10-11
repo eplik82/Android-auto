@@ -17,12 +17,27 @@ sirvida veebi auto ekraanilt, **kuid ainult siis, kui auto on pargitud**.
   koos heliga. Uuesti pargituna tuleb need jälle käsitsi avada.
 - Kui auto kiiruseandmeid pole või luba puudub, midagi ei näidata.
 
+## Kiiruse allikas
+
+Liikumist ja seismist hinnatakse kiiruse järgi. Allika saab seadetes valida:
+
+| Allikas | Kuidas töötab | „Seisab“ |
+| --- | --- | --- |
+| **Auto** (vaikimisi) | Auto enda kiirusandur Android Auto kaudu (`CarInfo` speed, luba `CAR_SPEED`) | kuni ~1 km/h |
+| **Telefoni GPS** | Telefoni GPS-i kiirus (`LocationManager`, täpse asukoha luba) | kuni ~4 km/h, sest GPS kõigub |
+
+Auto ekraanil on rida „Kiirus (auto/GPS): … km/h“. Kui seal on „andmed
+puuduvad“, siis valitud allikas kiirust ei anna: auto ei edasta kiirust
+või GPS-signaali pole (tunnel, parkimismaja). Siis jääb video lukku.
+Kui GPS-ilt pole 5 sekundit uut lugemit tulnud, loetakse kiirus teadmata.
+
 ## Seaded (telefonis)
 
 | Seade | Selgitus |
 | --- | --- |
 | YouTube'i video | Link või video ID; saab ka YouTube'ist jagada |
 | Brauseri avaleht | Nt `www.google.com` |
+| Kiiruse allikas | Auto või telefoni GPS (vt eespool) |
 | Paigalseismise aeg | 30–600 sekundit enne video/brauseri lubamist |
 | Päeva/öö režiim | Automaatne (auto järgi, nt esitulede sisselülitamisel), Päev või Öö. Mõjutab auto ekraani teateid, veebilehti (tume teema toega lehed) ja telefoni seadete vaadet |
 
@@ -93,6 +108,7 @@ Hoia `release.jks` ja paroolid alles, aga ära lisa neid repositooriumi.
 | `ParkedVideoService.kt` | Android Auto teenus ja sessioon |
 | `ParkedScreen.kt` | Auto ekraan, nupud ja pargitud oleku reeglid |
 | `ParkingMonitor.kt` | Kiiruse jälgimine → `MOVING` / `STOPPED` / `PARKED` |
+| `SpeedSources.kt` | Kiiruse allikad: auto andur ja telefoni GPS |
 | `SurfaceRenderer.kt` | Auto ekraani pind → virtuaalne ekraan, päeva/öö teema |
 | `SurfacePresentation.kt` | Teade, YouTube'i mängija või veebileht (WebView) |
 | `AppSettings.kt`, `SettingsInput.kt` | Seaded ja nende kontroll |

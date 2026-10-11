@@ -27,10 +27,16 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
 
     private val settings = AppSettings(carContext)
     private val renderer = SurfaceRenderer(carContext)
-    private val monitor = ParkingMonitor(carContext, { settings.stationarySeconds * 1000L }) { onParkingChanged() }
+    private val monitor = ParkingMonitor(
+        carContext,
+        stationaryMillis = { settings.stationarySeconds * 1000L },
+        onStateChange = { onParkingChanged() },
+        onSpeedUpdate = { if (mode == Mode.IDLE) renderer.showMessage(fullStatus()) },
+    )
     private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         applyTheme()
         monitor.simulation = settings.simulatedMotion
+        if (settings.speedSource != monitor.sourceType) startMonitoring()
         refresh()
     }
 
@@ -84,13 +90,19 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private fun startMonitoring() {
-        if (carContext.checkSelfPermission(CAR_SPEED) == PackageManager.PERMISSION_GRANTED) {
-            monitor.start()
+        val type = settings.speedSource
+        val required = type.permissions.first()
+        if (carContext.checkSelfPermission(required) == PackageManager.PERMISSION_GRANTED) {
+            permissionDenied = false
+            monitor.start(type)
             return
         }
-        carContext.requestPermissions(listOf(CAR_SPEED)) { granted, _ ->
-            permissionDenied = CAR_SPEED !in granted
-            if (!permissionDenied) monitor.start()
+        // Kuni luba pole, jääb allikas teadmata olekusse (video lukus).
+        monitor.start(type)
+        carContext.requestPermissions(type.permissions) { granted, _ ->
+            if (settings.speedSource != type) return@requestPermissions
+            permissionDenied = required !in granted
+            if (!permissionDenied) monitor.start(type)
             refresh()
         }
     }
@@ -143,8 +155,21 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
 
     /** Näitab olekuteadet, kui midagi parasjagu avatud pole, ja uuendab nuppe. */
     private fun refresh() {
-        if (mode == Mode.IDLE) renderer.showMessage(statusMessage() + simulationNote())
+        if (mode == Mode.IDLE) renderer.showMessage(fullStatus())
         invalidate()
+    }
+
+    private fun fullStatus(): String = statusMessage() + "\n\n" + speedLine() + simulationNote()
+
+    /** Diagnostika: millist allikat kasutatakse ja mis kiirus sealt tuleb. */
+    private fun speedLine(): String {
+        val source = carContext.getString(
+            if (monitor.sourceType == SpeedSourceType.GPS) R.string.car_source_gps else R.string.car_source_car
+        )
+        val speed = monitor.realSpeed
+            ?.let { carContext.getString(R.string.car_speed_kmh, Math.round(it * 3.6f)) }
+            ?: carContext.getString(R.string.car_speed_none)
+        return carContext.getString(R.string.car_speed_line, source, speed)
     }
 
     private fun simulationNote(): String = when {
@@ -155,8 +180,13 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private fun statusMessage(): String = when (monitor.state) {
-        ParkingState.UNKNOWN ->
-            carContext.getString(if (permissionDenied) R.string.car_msg_no_permission else R.string.car_msg_unknown)
+        ParkingState.UNKNOWN -> carContext.getString(
+            when {
+                !permissionDenied -> R.string.car_msg_unknown
+                monitor.sourceType == SpeedSourceType.GPS -> R.string.car_msg_no_location_permission
+                else -> R.string.car_msg_no_permission
+            }
+        )
         ParkingState.MOVING -> carContext.getString(R.string.car_msg_moving)
         ParkingState.STOPPED -> carContext.getString(R.string.car_msg_waiting, settings.stationarySeconds)
         ParkingState.PARKED -> carContext.getString(R.string.car_msg_parked)
@@ -166,8 +196,4 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         Action.Builder().setTitle(carContext.getString(title)).setOnClickListener { onClick() }.build()
 
     private fun toast(text: Int) = CarToast.makeText(carContext, text, CarToast.LENGTH_LONG).show()
-
-    private companion object {
-        const val CAR_SPEED = "com.google.android.gms.permission.CAR_SPEED"
-    }
 }

@@ -55,6 +55,34 @@
 
         <TextView
             style="@style/SectionLabel"
+            android:text="@string/setup_speed_label" />
+
+        <RadioGroup
+            android:id="@+id/speed_source_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/speed_car"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/setup_speed_car" />
+
+            <RadioButton
+                android:id="@+id/speed_gps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/setup_speed_gps" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setup_speed_info"
+            android:textSize="13sp" />
+
+        <TextView
+            style="@style/SectionLabel"
             android:text="@string/setup_theme_label" />
 
         <RadioGroup

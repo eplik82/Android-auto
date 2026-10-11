@@ -10,6 +10,11 @@
     <string name="setup_home_hint">nt www.google.com</string>
     <string name="setup_stationary_label">Paigalseismise aeg enne avamist (sekundit)</string>
     <string name="setup_stationary_hint">%1$d–%2$d</string>
+    <string name="setup_speed_label">Kiiruse allikas</string>
+    <string name="setup_speed_car">Auto (sõiduki kiirusandur)</string>
+    <string name="setup_speed_gps">Telefoni GPS</string>
+    <string name="setup_speed_info">Auto andur on täpseim. Vali GPS, kui auto ekraanil on „Kiirus (auto): andmed puuduvad“. GPS-iga loetakse seisvaks kiirus kuni ~4 km/h; tunnelis ja parkimismajas võib signaal kaduda ning siis jääb video lukku.</string>
+    <string name="setup_location_denied">GPS-i kasutamiseks luba rakendusele asukoht (täpne asukoht).</string>
     <string name="setup_theme_label">Päeva/öö režiim</string>
     <string name="setup_theme_auto">Automaatne (auto järgi)</string>
     <string name="setup_theme_day">Päev (hele)</string>
@@ -47,6 +52,12 @@
     <string name="car_msg_moving">Sõidu ajal videot ega brauserit ei näidata.</string>
     <string name="car_msg_waiting">Auto seisab.\nVideo ja brauseri saab avada, kui auto on %1$d s paigal olnud.</string>
     <string name="car_msg_parked">Auto on pargitud.\nVali „Video“ või „Brauser“.</string>
+    <string name="car_msg_no_location_permission">Asukoha luba puudub.\nLuba telefonis „Pargitud video“ juurdepääs täpsele asukohale.</string>
+    <string name="car_source_car">auto</string>
+    <string name="car_source_gps">GPS</string>
+    <string name="car_speed_line">Kiirus (%1$s): %2$s</string>
+    <string name="car_speed_kmh">%1$d km/h</string>
+    <string name="car_speed_none">andmed puuduvad</string>
     <string name="car_test_moving">[Testrežiim: telefon liigub]</string>
     <string name="car_test_stationary">[Testrežiim: telefon seisab]</string>
     <string name="car_test_ignored">[Testrežiim „seisab“ ei kehti – auto annab päris kiiruse]</string>

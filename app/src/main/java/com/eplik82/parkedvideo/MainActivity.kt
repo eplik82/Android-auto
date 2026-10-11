@@ -2,6 +2,7 @@ package com.eplik82.parkedvideo
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -15,6 +16,7 @@ class MainActivity : Activity() {
     private lateinit var homeUrlInput: EditText
     private lateinit var stationaryInput: EditText
     private lateinit var themeGroup: RadioGroup
+    private lateinit var speedSourceGroup: RadioGroup
     private lateinit var status: TextView
     private lateinit var testStatus: TextView
 
@@ -30,6 +32,7 @@ class MainActivity : Activity() {
         homeUrlInput = findViewById(R.id.home_url_input)
         stationaryInput = findViewById(R.id.stationary_input)
         themeGroup = findViewById(R.id.theme_group)
+        speedSourceGroup = findViewById(R.id.speed_source_group)
         status = findViewById(R.id.status_text)
         stationaryInput.hint = getString(
             R.string.setup_stationary_hint,
@@ -57,6 +60,9 @@ class MainActivity : Activity() {
         videoInput.setText(settings.videoId?.let { "https://youtu.be/$it" }.orEmpty())
         homeUrlInput.setText(settings.homeUrl)
         stationaryInput.setText(settings.stationarySeconds.toString())
+        speedSourceGroup.check(
+            if (settings.speedSource == SpeedSourceType.GPS) R.id.speed_gps else R.id.speed_car
+        )
         themeGroup.check(
             when (settings.themeMode) {
                 ThemeMode.AUTO -> R.id.theme_auto
@@ -65,6 +71,15 @@ class MainActivity : Activity() {
             }
         )
     }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_LOCATION && !hasPermission(SpeedSourceType.GPS.permissions.first())) {
+            status.setText(R.string.setup_location_denied)
+        }
+    }
+
+    private fun hasPermission(permission: String) = checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
 
     /** Testnupud rakenduvad kohe, ilma „Salvesta“ vajutamata. */
     private fun setSimulation(motion: SimulatedMotion) {
@@ -130,9 +145,20 @@ class MainActivity : Activity() {
         settings.homeUrl = homeUrl!!
         settings.stationarySeconds = seconds!!
         settings.themeMode = newTheme
+        val speedSource = if (speedSourceGroup.checkedRadioButtonId == R.id.speed_gps) SpeedSourceType.GPS
+        else SpeedSourceType.CAR
+        settings.speedSource = speedSource
         homeUrlInput.setText(homeUrl)
         status.setText(R.string.setup_saved)
 
+        if (speedSource == SpeedSourceType.GPS && !hasPermission(speedSource.permissions.first())) {
+            requestPermissions(speedSource.permissions.toTypedArray(), REQUEST_LOCATION)
+        }
+
         if (themeChanged) recreate()
+    }
+
+    private companion object {
+        const val REQUEST_LOCATION = 1
     }
 }
