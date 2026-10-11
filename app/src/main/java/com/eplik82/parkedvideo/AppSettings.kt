@@ -27,6 +27,11 @@ class AppSettings(context: Context) {
         get() = ThemeMode.entries.firstOrNull { it.name == prefs.getString(KEY_THEME, null) } ?: ThemeMode.AUTO
         set(value) = prefs.edit().putString(KEY_THEME, value.name).apply()
 
+    var simulatedMotion: SimulatedMotion
+        get() = SimulatedMotion.entries.firstOrNull { it.name == prefs.getString(KEY_SIMULATION, null) }
+            ?: SimulatedMotion.OFF
+        set(value) = prefs.edit().putString(KEY_SIMULATION, value.name).apply()
+
     /** Kas kasutada tumedat kujundust; AUTO puhul otsustab [autoDark] (auto või telefoni süsteem). */
     fun isDark(autoDark: Boolean): Boolean = when (themeMode) {
         ThemeMode.AUTO -> autoDark
@@ -45,6 +50,7 @@ class AppSettings(context: Context) {
         private const val KEY_HOME_URL = "home_url"
         private const val KEY_STATIONARY_SECONDS = "stationary_seconds"
         private const val KEY_THEME = "theme"
+        private const val KEY_SIMULATION = "simulated_motion"
 
         fun isSystemDark(context: Context): Boolean =
             context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES

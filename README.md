@@ -30,6 +30,18 @@ Android Auto ei anna rakendustele käigu- ega seisupiduri infot, seega
 otsustatakse pargitud olek ainult kiiruse järgi. Kasuta rakendust ainult
 päriselt pargitud autos.
 
+## Testimine
+
+Telefoni seadete all on nupud **„Telefon liigub“**, **„Telefon seisab“** ja
+**„Lõpeta test“**. Need rakenduvad kohe ja auto ekraanil on testi ajal näha
+märge `[Testrežiim …]`.
+
+- „Telefon liigub“ kehtib alati: video või brauser sulgub kohe.
+- „Telefon seisab“ kehtib ainult siis, kui kiiruse luba on antud, aga auto
+  päris kiirust ei anna (nt arvutis Android Auto emulaatoriga DHU). Päris
+  autos kehtib alati tegelik kiirus, seega testnupuga ei saa sõidu ajal
+  videot avada. Ka testis tuleb oodata määratud paigalseismise aeg.
+
 ## Paigaldamine
 
 Google Play sellist rakendust ei luba (video on Android Autos keelatud ja

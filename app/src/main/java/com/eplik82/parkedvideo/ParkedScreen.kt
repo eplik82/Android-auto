@@ -30,6 +30,7 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     private val monitor = ParkingMonitor(carContext, { settings.stationarySeconds * 1000L }) { onParkingChanged() }
     private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         applyTheme()
+        monitor.simulation = settings.simulatedMotion
         refresh()
     }
 
@@ -43,6 +44,7 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
                 carContext.getCarService(AppManager::class.java).setSurfaceCallback(renderer)
                 settings.registerListener(settingsListener)
                 applyTheme()
+                monitor.simulation = settings.simulatedMotion
                 startMonitoring()
                 refresh()
             }
@@ -141,8 +143,15 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
 
     /** Näitab olekuteadet, kui midagi parasjagu avatud pole, ja uuendab nuppe. */
     private fun refresh() {
-        if (mode == Mode.IDLE) renderer.showMessage(statusMessage())
+        if (mode == Mode.IDLE) renderer.showMessage(statusMessage() + simulationNote())
         invalidate()
+    }
+
+    private fun simulationNote(): String = when {
+        monitor.simulationIgnored -> "\n\n" + carContext.getString(R.string.car_test_ignored)
+        monitor.simulation == SimulatedMotion.MOVING -> "\n\n" + carContext.getString(R.string.car_test_moving)
+        monitor.simulation == SimulatedMotion.STATIONARY -> "\n\n" + carContext.getString(R.string.car_test_stationary)
+        else -> ""
     }
 
     private fun statusMessage(): String = when (monitor.state) {

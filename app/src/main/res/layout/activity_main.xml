@@ -96,6 +96,52 @@
             android:textSize="16sp" />
 
         <TextView
+            style="@style/SectionLabel"
+            android:layout_marginTop="32dp"
+            android:text="@string/test_label" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/test_info"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/test_moving_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/test_moving" />
+
+            <Button
+                android:id="@+id/test_stationary_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/test_stationary" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/test_off_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/test_off" />
+
+        <TextView
+            android:id="@+id/test_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"

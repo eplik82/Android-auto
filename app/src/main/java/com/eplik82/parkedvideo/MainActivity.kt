@@ -16,6 +16,7 @@ class MainActivity : Activity() {
     private lateinit var stationaryInput: EditText
     private lateinit var themeGroup: RadioGroup
     private lateinit var status: TextView
+    private lateinit var testStatus: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         settings = AppSettings(this)
@@ -37,6 +38,12 @@ class MainActivity : Activity() {
         )
         findViewById<Button>(R.id.save_button).setOnClickListener { save() }
 
+        testStatus = findViewById(R.id.test_status)
+        findViewById<Button>(R.id.test_moving_button).setOnClickListener { setSimulation(SimulatedMotion.MOVING) }
+        findViewById<Button>(R.id.test_stationary_button).setOnClickListener { setSimulation(SimulatedMotion.STATIONARY) }
+        findViewById<Button>(R.id.test_off_button).setOnClickListener { setSimulation(SimulatedMotion.OFF) }
+        showSimulation()
+
         if (savedInstanceState == null) loadFields()
         handleShare(intent)
     }
@@ -55,6 +62,22 @@ class MainActivity : Activity() {
                 ThemeMode.AUTO -> R.id.theme_auto
                 ThemeMode.DAY -> R.id.theme_day
                 ThemeMode.NIGHT -> R.id.theme_night
+            }
+        )
+    }
+
+    /** Testnupud rakenduvad kohe, ilma „Salvesta“ vajutamata. */
+    private fun setSimulation(motion: SimulatedMotion) {
+        settings.simulatedMotion = motion
+        showSimulation()
+    }
+
+    private fun showSimulation() {
+        testStatus.setText(
+            when (settings.simulatedMotion) {
+                SimulatedMotion.OFF -> R.string.test_status_off
+                SimulatedMotion.MOVING -> R.string.test_status_moving
+                SimulatedMotion.STATIONARY -> R.string.test_status_stationary
             }
         )
     }
