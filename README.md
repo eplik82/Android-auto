@@ -31,6 +31,18 @@ puuduvad“, siis valitud allikas kiirust ei anna: auto ei edasta kiirust
 või GPS-signaali pole (tunnel, parkimismaja). Siis jääb video lukku.
 Kui GPS-ilt pole 5 sekundit uut lugemit tulnud, loetakse kiirus teadmata.
 
+## Auto info (diagnostika)
+
+Auto ekraani nupp **Info** avab loendi kõigest, mida auto Android Auto kaudu
+edastab: mark/mudel/aasta, kütuse liik ja laadimispistik, tegelik ja näidiku
+kiirus, kütuse ja aku tase, sõiduulatus, läbisõit, teemaksukaart, kompass,
+kiirendusandur, güroskoop, auto GPS, öörežiim ja Car API tase.
+
+Iga väärtuse asemel võib olla „pole saadaval“ (auto ei saada), „auto ei
+toeta“, „luba puudub“ või „ootan…“ (andmeid pole veel tulnud). Käiku,
+seisupidurit, uksi jms Android Auto rakendustele ei anna. Sõidu ajal võib
+Android Auto loendit lühendada.
+
 ## Seaded (telefonis)
 
 | Seade | Selgitus |
@@ -108,6 +120,7 @@ Hoia `release.jks` ja paroolid alles, aga ära lisa neid repositooriumi.
 | `ParkedVideoService.kt` | Android Auto teenus ja sessioon |
 | `ParkedScreen.kt` | Auto ekraan, nupud ja pargitud oleku reeglid |
 | `ParkingMonitor.kt` | Kiiruse jälgimine → `MOVING` / `STOPPED` / `PARKED` |
+| `CarInfoScreen.kt` | Diagnostikavaade „Auto info“ |
 | `SpeedSources.kt` | Kiiruse allikad: auto andur ja telefoni GPS |
 | `SurfaceRenderer.kt` | Auto ekraani pind → virtuaalne ekraan, päeva/öö teema |
 | `SurfacePresentation.kt` | Teade, YouTube'i mängija või veebileht (WebView) |

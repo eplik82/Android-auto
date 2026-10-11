@@ -83,8 +83,12 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
             monitor.state == ParkingState.PARKED -> {
                 actions.addAction(action(R.string.car_play) { startVideo() })
                 actions.addAction(action(R.string.car_browser) { openBrowser() })
+                actions.addAction(infoAction())
             }
-            else -> actions.addAction(action(R.string.car_locked) { toast(R.string.car_locked_toast) })
+            else -> {
+                actions.addAction(action(R.string.car_locked) { toast(R.string.car_locked_toast) })
+                actions.addAction(infoAction())
+            }
         }
         return template.setActionStrip(actions.build()).build()
     }
@@ -191,6 +195,8 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         ParkingState.STOPPED -> carContext.getString(R.string.car_msg_waiting, settings.stationarySeconds)
         ParkingState.PARKED -> carContext.getString(R.string.car_msg_parked)
     }
+
+    private fun infoAction() = action(R.string.car_info) { screenManager.push(CarInfoScreen(carContext)) }
 
     private fun action(title: Int, onClick: () -> Unit): Action =
         Action.Builder().setTitle(carContext.getString(title)).setOnClickListener { onClick() }.build()

@@ -61,4 +61,34 @@
     <string name="car_test_moving">[Testrežiim: telefon liigub]</string>
     <string name="car_test_stationary">[Testrežiim: telefon seisab]</string>
     <string name="car_test_ignored">[Testrežiim „seisab“ ei kehti – auto annab päris kiiruse]</string>
+
+    <!-- Auto info (diagnostika) -->
+    <string name="car_info">Info</string>
+    <string name="info_title">Auto info</string>
+    <string name="info_waiting">ootan…</string>
+    <string name="info_no_permission">luba puudub</string>
+    <string name="info_unavailable">pole saadaval</string>
+    <string name="info_unsupported">auto ei toeta</string>
+    <string name="info_unknown">teadmata</string>
+    <string name="info_error">viga</string>
+    <string name="info_yes">jah</string>
+    <string name="info_no">ei</string>
+    <string name="info_vehicle">Sõiduk</string>
+    <string name="info_vehicle_detail">Kütus: %1$s · Pistik: %2$s</string>
+    <string name="info_speed">Kiirus</string>
+    <string name="info_speed_detail">Tegelik: %1$s · Näidik: %2$s</string>
+    <string name="info_energy">Kütus ja aku</string>
+    <string name="info_energy_detail">Kütus: %1$s · Aku: %2$s</string>
+    <string name="info_range_detail">Sõiduulatus: %1$s · Madal tase: %2$s</string>
+    <string name="info_odometer">Läbisõit</string>
+    <string name="info_toll_detail">Teemaksukaart: %1$s</string>
+    <string name="info_toll_valid">kehtiv</string>
+    <string name="info_toll_invalid">kehtetu</string>
+    <string name="info_toll_none">puudub</string>
+    <string name="info_sensors">Andurid</string>
+    <string name="info_sensors_detail">Kompass: %1$s · Kiirendus: %2$s m/s²</string>
+    <string name="info_gyro_detail">Güroskoop: %1$s rad/s</string>
+    <string name="info_system">Asukoht ja süsteem</string>
+    <string name="info_location_detail">Auto GPS: %1$s</string>
+    <string name="info_system_detail">Öörežiim: %1$s · Car API tase: %2$d</string>
 </resources>
