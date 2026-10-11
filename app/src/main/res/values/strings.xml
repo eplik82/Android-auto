@@ -24,7 +24,7 @@
     <string name="setup_invalid_video">Sellest lingist ei leitud YouTube\'i video ID-d.</string>
     <string name="setup_invalid_url">Avaleht peab olema veebiaadress, nt www.google.com.</string>
     <string name="setup_invalid_stationary">Paigalseismise aeg peab olema %1$d–%2$d sekundit.</string>
-    <string name="setup_info">Video ja brauser avanevad auto ekraanil ainult siis, kui auto on määratud aja katkematult paigal seisnud, ja sulguvad kohe, kui auto liikuma hakkab. Ilma kiiruseandmeteta neid ei avata. Lühim lubatud aeg on 30 sekundit, et need ei avaneks foori taga.\n\nAutomaatne režiim järgib auto päeva/öö olekut (nt esitulesid).\n\nPaigaldamine: Android Auto seadetes lülita sisse arendajarežiim (puuduta 10× versiooninumbrit) ja luba arendaja seadetes „Unknown sources“.</string>
+    <string name="setup_info">Video ja brauser avanevad auto ekraanil ainult siis, kui auto on määratud aja katkematult paigal seisnud, ja sulguvad kohe, kui auto liikuma hakkab. Ilma kiiruseandmeteta neid ei avata. Lühim lubatud aeg on 30 sekundit, et need ei avaneks foori taga.\n\nAutomaatne režiim järgib auto päeva/öö olekut (nt esitulesid).\n\nPaigaldamine: autos ilmub rakendus ainult siis, kui see on paigaldatud Google Play kaudu (nt sisemine jagamine). Käsitsi paigaldatud APK töötab ainult arvutis DHU emulaatoriga.</string>
 
     <!-- Testimine -->
     <string name="test_label">Testimine</string>
@@ -43,7 +43,7 @@
     <string name="compat_missing">pole paigaldatud</string>
     <string name="compat_unknown">teadmata</string>
     <string name="compat_report">Android Auto: %1$s\nAndroid Auto teenus nähtav: %2$s\nKategooria: %3$s\nRakenduse versioon: %4$s (%5$s)\nSilutav (debug): %6$s\nPaigaldaja: %7$s\nAndroid: %8$s (API %9$d)</string>
-    <string name="compat_hint">Kui teenus on nähtav, aga Android Auto rakendust ei näita, on põhjus Android Auto seadetes (Unknown sources, telefoni taaskäivitus). Seda teksti saab kopeerida ja saata.</string>
+    <string name="compat_hint">Android Auto näitab autos ainult Google Play kaudu paigaldatud Car App Library rakendusi. Kui paigaldaja pole com.android.vending (Google Play), ei ilmu rakendus autos ka siis, kui teenus on nähtav. Seda teksti saab kopeerida ja saata.</string>
 
     <!-- Auto ekraan -->
     <string name="car_play">Video</string>

@@ -36,7 +36,8 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
             echo "RELEASE_KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-            echo "note=Allkirjastatud püsiva release-võtmega." >> "$GITHUB_OUTPUT"
+            echo "note=Allkirjastatud püsiva release-võtmega. \`.aab\` on Google Play jaoks (sisemine jagamine)." >> "$GITHUB_OUTPUT"
+            echo "bundle=true" >> "$GITHUB_OUTPUT"
           else
             echo "note=⚠️ Allkirjastatud debug-võtmega (release-võtme saladusi pole seadistatud). Uuendamiseks võib olla vaja eelmine versioon enne eemaldada." >> "$GITHUB_OUTPUT"
           fi
@@ -53,18 +54,34 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "pargitud-video-${TAG}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "pargitud-video-${TAG}-debug.apk"
 
+      # Google Play nõuab AAB-faili ja lükkab debug-võtmega allkirjastatud faili tagasi,
+      # seega ehitatakse see ainult püsiva võtmega.
+      - name: Build Play bundle
+        if: steps.signing.outputs.bundle == 'true'
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          export VERSION_NAME="${TAG#v}"
+          ./gradlew --no-daemon bundleRelease
+          cp app/build/outputs/bundle/release/app-release.aab "pargitud-video-${TAG}.aab"
+
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
           target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: false
           files: |
             pargitud-video-${{ env.TAG }}.apk
             pargitud-video-${{ env.TAG }}-debug.apk
+            pargitud-video-${{ env.TAG }}.aab
           body: |
             **Pargitud video ${{ env.TAG }}**: YouTube'i video ja veebibrauser Android Autos ainult pargitult.
 
-            Paigaldamine: laadi alla `pargitud-video-${{ env.TAG }}.apk`, paigalda telefoni ja luba Android Auto arendaja seadetes „Unknown sources“. Täpsemalt vt README.
+            **Autos kasutamiseks** tuleb rakendus paigaldada Google Play kaudu (sisemine jagamine, fail `.aab`), sest Android Auto ei näita autos käsitsi paigaldatud Car App Library rakendusi. Juhend: README → „Google Play sisemine jagamine“.
 
-            `-debug.apk` on silumisversioon testimiseks (nt kui tavaline versioon Android Autos ei ilmu). Mõlemal on sama paketinimi: paigalda korraga ainult üks.
+            `.apk` ja `-debug.apk` sobivad telefonis seadistamiseks ja arvutis DHU-ga testimiseks. Mõlemal on sama paketinimi: paigalda korraga ainult üks.
 
             ${{ steps.signing.outputs.note }}

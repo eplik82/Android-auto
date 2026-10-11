@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.eplik82.parkedvideo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.eplik82.parkedvideo"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         // Release-töövoog annab versiooni Git'i sildist (v1.2.3 → 1.2.3).
         versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "1.0"

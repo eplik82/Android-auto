@@ -71,18 +71,63 @@ märge `[Testrežiim …]`.
 
 ## Paigaldamine
 
-Google Play sellist rakendust ei luba (video on Android Autos keelatud ja
-rakendus kasutab kuvamiseks navigatsioonirakenduse pinda), seega paigaldatakse
-see isiklikuks kasutuseks käsitsi:
+**Tähtis:** Android Auto näitab autos ainult neid Car App Library rakendusi,
+mis on paigaldatud usaldusväärsest allikast (Google Play). Android Auto
+arendaja seade „Unknown sources“ **ei kehti** Car App Library rakendustele
+([Google'i dokumentatsioon](https://developer.android.com/training/cars/testing)).
+Seega:
 
-1. Laadi APK alla GitHubi **Releases** lehelt (`pargitud-video-vX.Y.Z.apk`).
-   Arendusversiooni leiad viimase „Build APK“ käivituse alt (artefakt
-   `pargitud-video-debug-apk`).
-2. Paigalda APK telefoni.
-3. Ava telefonis Android Auto seaded, puuduta 10 korda versiooninumbrit ja
-   lülita arendaja seadetes sisse **Unknown sources**.
-4. Ühenda telefon autoga. „Pargitud video“ ilmub rakenduste loendisse.
-   Esimesel käivitamisel küsitakse telefonis luba lugeda auto kiirust.
+- **Autos:** paigalda Google Play sisemise jagamise kaudu (vt allpool).
+- **Arvutis (DHU emulaator):** sobib ka GitHubi releases'ist alla laaditud
+  `.apk` või `-debug.apk`.
+
+Rakenduse seadetes on jaotis „Android Auto ühilduvus“, kus on näha paigaldaja.
+Autos töötamiseks peab see olema `com.android.vending` (Google Play).
+
+## Google Play sisemine jagamine
+
+Sisemine jagamine (Internal App Sharing) annab paigalduslingi ilma Google'i
+ülevaatuseta ja ilma, et rakendus poes avalikult ilmuks.
+
+### 1. Allkirjastamisvõti GitHubi (üks kord)
+
+Google Play ei võta vastu debug-võtmega allkirjastatud faile. Lisa GitHubis
+**Settings → Secrets and variables → Actions → New repository secret** alla
+4 saladust: `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`,
+`RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD` (vt „Püsiv allkirjastamisvõti“).
+Pärast seda lisab release-töövoog releasele ka faili `pargitud-video-vX.Y.Z.aab`.
+
+### 2. Google Play arendajakonto (üks kord)
+
+1. Ava [play.google.com/console](https://play.google.com/console) ja loo
+   arendajakonto (ühekordne tasu 25 USD, isikutuvastus võib võtta mõne päeva).
+2. Vali konto tüübiks isiklik konto.
+
+### 3. Rakenduse loomine Play Console'is (üks kord)
+
+1. **Loo rakendus** → nimi „Pargitud video“, keel eesti, tüüp *Rakendus*,
+   *Tasuta*. Kinnita deklaratsioonid.
+2. Rakendust ei pea avaldama ega poe lehte täitma.
+
+### 4. Sisemise jagamise lubamine
+
+1. Play Console'is: **Kõik rakendused → ⋮ / Seaded → Sisemine rakenduste
+   jagamine** (Internal app sharing) ja lisa oma Google'i konto e-post
+   üleslaadijate ja allalaadijate hulka.
+2. Telefonis: ava **Play pood → profiilipilt → Seaded → Teave**, puuduta
+   7 korda **Play poe versioon**. Seejärel **Seaded → Üldine → Sisemine
+   rakenduste jagamine** → sisse.
+
+### 5. Üleslaadimine ja paigaldamine (iga versiooniga)
+
+1. Laadi GitHubi releases'ist alla `pargitud-video-vX.Y.Z.aab`.
+2. Ava [play.google.com/console/internal-app-sharing](https://play.google.com/console/internal-app-sharing)
+   ja laadi `.aab` üles. Saad paigalduslingi.
+3. **Eemalda telefonist** varem käsitsi paigaldatud „Pargitud video“
+   (teise võtmega allkirjastatud versiooni peale Play ei paigalda).
+4. Ava link telefonis → Play pood → **Installi**.
+5. Ava rakendus korra telefonis, ühenda telefon autoga ja vaata
+   Android Auto seadetes **Kohanda käivitajat**.
 
 ## Uue versiooni väljaandmine
 
