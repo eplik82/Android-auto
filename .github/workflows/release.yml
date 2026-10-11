@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versioon, nt 1.0.0 (luuakse silt v1.0.0)"
+        required: true
+
+env:
+  # Sildi push'il on silt juba olemas; käsitsi käivitamisel luuakse see sisestatud versioonist.
+  TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
 
 permissions:
   contents: write
@@ -34,22 +43,23 @@ jobs:
 
       - name: Build release APK
         env:
-          VERSION_NAME: ${{ github.ref_name }}
           VERSION_CODE: ${{ github.run_number }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          export VERSION_NAME="${VERSION_NAME#v}"
+          export VERSION_NAME="${TAG#v}"
           ./gradlew --no-daemon testReleaseUnitTest assembleRelease
-          cp app/build/outputs/apk/release/app-release.apk "pargitud-video-${GITHUB_REF_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "pargitud-video-${TAG}.apk"
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: pargitud-video-${{ github.ref_name }}.apk
+          tag_name: ${{ env.TAG }}
+          target_commitish: ${{ github.sha }}
+          files: pargitud-video-${{ env.TAG }}.apk
           body: |
-            **Pargitud video ${{ github.ref_name }}**: YouTube'i video ja veebibrauser Android Autos ainult pargitult.
+            **Pargitud video ${{ env.TAG }}**: YouTube'i video ja veebibrauser Android Autos ainult pargitult.
 
-            Paigaldamine: laadi alla `pargitud-video-${{ github.ref_name }}.apk`, paigalda telefoni ja luba Android Auto arendaja seadetes „Unknown sources“. Täpsemalt vt README.
+            Paigaldamine: laadi alla `pargitud-video-${{ env.TAG }}.apk`, paigalda telefoni ja luba Android Auto arendaja seadetes „Unknown sources“. Täpsemalt vt README.
 
             ${{ steps.signing.outputs.note }}

@@ -59,7 +59,8 @@ see isiklikuks kasutuseks käsitsi:
 
 ## Uue versiooni väljaandmine
 
-Lükka üles silt kujul `v1.2.3`:
+GitHubis: **Actions → Release APK → Run workflow**, sisesta versioon (nt
+`1.2.3`). Töövoog loob sildi `v1.2.3` ise. Teine võimalus on lükata silt ise üles:
 
 ```sh
 git tag v1.2.3
