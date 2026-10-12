@@ -95,6 +95,9 @@ class ParkingMonitor(
         hasAccess = false
         realSpeed = null
         handler.removeCallbacks(promoteToParked)
+        // Ilma selleta jääks olek STOPPED alles, kuid taimer on tühistatud ja
+        // evaluate() ei käivita seda uuesti – auto ei muutuks kunagi pargituks.
+        state = ParkingState.UNKNOWN
     }
 
     private fun onSpeed(speed: Float?) {
