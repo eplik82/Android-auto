@@ -91,7 +91,8 @@ class SurfacePresentation(
         frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         // Video nupud paremas servas keskel üksteise all (Android Auto nupud oleksid
         // ülal paremal YouTube'i seadete nupu peal).
-        val buttonSize = (surfaceHeight * 0.14f).toInt().coerceAtLeast(64)
+        // Nupud mahuvad paremasse äärde (vt videoRightMargin).
+        val buttonSize = (videoRightMargin * 0.86f).toInt().coerceIn(48, (surfaceHeight * 0.14f).toInt().coerceAtLeast(48))
         videoControls = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -105,7 +106,7 @@ class SurfacePresentation(
         frame.addView(videoControls, FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
             Gravity.END or Gravity.CENTER_VERTICAL,
-        ).apply { marginEnd = buttonSize / 3 })
+        ).apply { marginEnd = ((videoRightMargin - buttonSize) / 2).coerceAtLeast(8) })
         setContentView(frame)
     }
 
@@ -118,8 +119,20 @@ class SurfacePresentation(
     private var visibleArea: Rect? = null
     private var fullBleed = false
 
+    /**
+     * Video-režiimis tühi äär paremal: seal on Android Auto kohustuslik ⓘ-nupp,
+     * mis muidu kataks YouTube'i seadete nuppu. Äär on nii kitsas, et 21:9
+     * video mahub ikka täiskõrgusel (pind 1920×720 ekraanil ~1816×696).
+     */
+    private val videoRightMargin: Int =
+        minOf((surfaceHeight * 0.16f).toInt(), (surfaceWidth - surfaceHeight * 21f / 9f).toInt()).coerceAtLeast(0)
+
     private fun applyPadding() {
         val area = visibleArea
+        if (fullBleed && videoMode) {
+            root.setPadding(0, 0, videoRightMargin, 0)
+            return
+        }
         if (fullBleed || area == null) {
             root.setPadding(0, 0, 0, 0)
             return
@@ -166,6 +179,8 @@ class SurfacePresentation(
 
     private fun setVideoMode(value: Boolean) {
         videoMode = value
+        frame.setBackgroundColor(if (value) Color.BLACK else backgroundColor)
+        applyPadding()
         if (!value) {
             handler.removeCallbacks(hideControls)
             videoControls.visibility = View.GONE
