@@ -82,7 +82,7 @@ class SurfacePresentation(
         setContentView(frame)
     }
 
-    /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale (v.a video, mis täidab kogu ekraani). */
+    /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale (v.a video ja brauser, mis täidavad kogu ekraani). */
     fun setVisibleArea(area: Rect) {
         visibleArea = area
         applyPadding()
@@ -126,7 +126,8 @@ class SurfacePresentation(
     }
 
     fun showWeb(url: String) {
-        setFullBleed(false)
+        // Ka brauser kogu ekraanile; nupud hõljuvad peal ja peituvad ise.
+        setFullBleed(true)
         newWebView().loadUrl(url)
     }
 
