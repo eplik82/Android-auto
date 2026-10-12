@@ -2,6 +2,8 @@ package com.eplik82.parkedvideo
 
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import androidx.car.app.AppManager
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
@@ -41,6 +43,15 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private var permissionDenied = false
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** Kuni luba puudub, vaatab perioodiliselt, kas see on telefonis antud. */
+    private val permissionPoll = object : Runnable {
+        override fun run() {
+            recheckPermission()
+            if (permissionDenied) handler.postDelayed(this, PERMISSION_POLL_MILLIS)
+        }
+    }
     private var mode = Mode.IDLE
     private var paused = false
 
@@ -55,7 +66,10 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
                 refresh()
             }
 
+            override fun onResume(owner: LifecycleOwner) = recheckPermission()
+
             override fun onDestroy(owner: LifecycleOwner) {
+                handler.removeCallbacks(permissionPoll)
                 settings.unregisterListener(settingsListener)
                 monitor.stop()
                 renderer.release()
@@ -93,23 +107,30 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         return template.setActionStrip(actions.build()).build()
     }
 
+    /**
+     * Õigusi auto ekraanil ei küsita: CarContext.requestPermissions avab
+     * telefonis tegevuse auto ekraanile, mida uuem Android keelab
+     * (SecurityException → krahh). Luba antakse telefoni rakenduses
+     * ([MainActivity]); siin ainult kontrollitakse ja näidatakse teadet.
+     */
     private fun startMonitoring() {
         val type = settings.speedSource
-        val required = type.permissions.first()
-        if (carContext.checkSelfPermission(required) == PackageManager.PERMISSION_GRANTED) {
-            permissionDenied = false
-            monitor.start(type)
-            return
-        }
+        permissionDenied = !hasPermission(type)
         // Kuni luba pole, jääb allikas teadmata olekusse (video lukus).
         monitor.start(type)
-        carContext.requestPermissions(type.permissions) { granted, _ ->
-            if (settings.speedSource != type) return@requestPermissions
-            permissionDenied = required !in granted
-            if (!permissionDenied) monitor.start(type)
-            refresh()
-        }
+        handler.removeCallbacks(permissionPoll)
+        if (permissionDenied) handler.postDelayed(permissionPoll, PERMISSION_POLL_MILLIS)
     }
+
+    /** Luba võidi vahepeal telefonis anda – siis alusta kuulamist uuesti. */
+    private fun recheckPermission() {
+        if (!permissionDenied || !hasPermission(settings.speedSource)) return
+        startMonitoring()
+        refresh()
+    }
+
+    private fun hasPermission(type: SpeedSourceType) =
+        carContext.checkSelfPermission(type.permissions.first()) == PackageManager.PERMISSION_GRANTED
 
     private fun onParkingChanged() {
         if (monitor.state != ParkingState.PARKED) {
@@ -202,4 +223,8 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         Action.Builder().setTitle(carContext.getString(title)).setOnClickListener { onClick() }.build()
 
     private fun toast(text: Int) = CarToast.makeText(carContext, text, CarToast.LENGTH_LONG).show()
+
+    private companion object {
+        const val PERMISSION_POLL_MILLIS = 2_000L
+    }
 }
