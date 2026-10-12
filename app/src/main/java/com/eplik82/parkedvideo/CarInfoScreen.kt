@@ -1,6 +1,5 @@
 package com.eplik82.parkedvideo
 
-import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
 import androidx.car.app.CarContext
@@ -99,7 +98,7 @@ class CarInfoScreen(carContext: CarContext) : Screen(carContext) {
 
     init {
         lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onCreate(owner: LifecycleOwner) = requestPermissionsThenStart()
+            override fun onCreate(owner: LifecycleOwner) = startListening()
             override fun onDestroy(owner: LifecycleOwner) = stopListening()
         })
     }
@@ -132,15 +131,6 @@ class CarInfoScreen(carContext: CarContext) : Screen(carContext) {
             .setHeaderAction(Action.BACK)
             .setSingleList(list)
             .build()
-    }
-
-    private fun requestPermissionsThenStart() {
-        val missing = PERMISSIONS.filter { carContext.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
-        if (missing.isEmpty()) {
-            startListening()
-        } else {
-            carContext.requestPermissions(missing) { _, _ -> startListening() }
-        }
     }
 
     private fun startListening() {
@@ -260,10 +250,5 @@ class CarInfoScreen(carContext: CarContext) : Screen(carContext) {
 
     private companion object {
         const val REFRESH_MILLIS = 1_000L
-        val PERMISSIONS = listOf(
-            "com.google.android.gms.permission.CAR_SPEED",
-            "com.google.android.gms.permission.CAR_FUEL",
-            "com.google.android.gms.permission.CAR_MILEAGE",
-        )
     }
 }

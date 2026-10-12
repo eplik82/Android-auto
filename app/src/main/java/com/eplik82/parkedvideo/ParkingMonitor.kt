@@ -20,18 +20,16 @@ enum class SimulatedMotion { OFF, MOVING, STATIONARY }
 /** Otsus, millist kiirust arvestada; eraldi, et seda saaks ilma autota testida. */
 object MotionRules {
     /**
+     * Testrežiim kehtib alati ja eirab auto/GPS-i kiirust, sest emulaator
+     * (DHU) annab ise mingi kiiruse ja muidu ei saaks pargitud olekut testida.
+     *
      * @param realSpeed tegelik kiirus (m/s) või null, kui see pole teada
-     * @param speedAccess kas rakendusel on luba ja kiiruse kuulamine käib
      * @return arvestatav kiirus või null (= teadmata, videot ei näidata)
      */
-    fun effectiveSpeed(simulation: SimulatedMotion, realSpeed: Float?, speedAccess: Boolean): Float? = when {
-        // „Liigub“ on ohutu suund ja kehtib alati.
-        simulation == SimulatedMotion.MOVING -> Float.MAX_VALUE
-        // Päris kiirus on alati tähtsam kui „seisab“-test.
-        realSpeed != null -> realSpeed
-        // „Seisab“-test ainult siis, kui luba on olemas, aga kiirust ei tule (nt DHU emulaator).
-        simulation == SimulatedMotion.STATIONARY && speedAccess -> 0f
-        else -> null
+    fun effectiveSpeed(simulation: SimulatedMotion, realSpeed: Float?): Float? = when (simulation) {
+        SimulatedMotion.MOVING -> Float.MAX_VALUE
+        SimulatedMotion.STATIONARY -> 0f
+        SimulatedMotion.OFF -> realSpeed
     }
 
     fun isStationary(speed: Float, thresholdMps: Float): Boolean = kotlin.math.abs(speed) <= thresholdMps
@@ -74,10 +72,6 @@ class ParkingMonitor(
             evaluate()
         }
 
-    /** „Seisab“-test on sisse lülitatud, kuid allikas annab päris kiiruse, seega seda eiratakse. */
-    val simulationIgnored: Boolean
-        get() = simulation == SimulatedMotion.STATIONARY && realSpeed != null
-
     private var source: SpeedSource? = null
     private val handler = Handler(Looper.getMainLooper())
     private val promoteToParked = Runnable { if (state == ParkingState.STOPPED) update(ParkingState.PARKED) }
@@ -101,6 +95,9 @@ class ParkingMonitor(
         hasAccess = false
         realSpeed = null
         handler.removeCallbacks(promoteToParked)
+        // Ilma selleta jääks olek STOPPED alles, kuid taimer on tühistatud ja
+        // evaluate() ei käivita seda uuesti – auto ei muutuks kunagi pargituks.
+        state = ParkingState.UNKNOWN
     }
 
     private fun onSpeed(speed: Float?) {
@@ -110,7 +107,7 @@ class ParkingMonitor(
     }
 
     private fun evaluate() {
-        val speed = MotionRules.effectiveSpeed(simulation, realSpeed, hasAccess)
+        val speed = MotionRules.effectiveSpeed(simulation, realSpeed)
         when {
             speed == null -> {
                 handler.removeCallbacks(promoteToParked)

@@ -6,7 +6,10 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
@@ -14,14 +17,18 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONObject
 
 /** Auto ekraani pinnale joonistatav sisu: teade, YouTube'i mängija või veebileht. */
 class SurfacePresentation(
@@ -30,6 +37,10 @@ class SurfacePresentation(
     private val dark: Boolean,
     private val surfaceWidth: Int,
     private val surfaceHeight: Int,
+    /** Kutsutakse, kui puudutus viis fookuse veebilehe tekstiväljale. */
+    private val onEditableTapped: () -> Unit,
+    /** Video oma nupud paremas servas: paus/esita ja tagasi. */
+    private val onVideoControl: (VideoControl) -> Unit,
 ) : Presentation(
     context,
     display,
@@ -41,24 +52,91 @@ class SurfacePresentation(
 
     private lateinit var root: FrameLayout
     private lateinit var message: TextView
+    private lateinit var homeBackground: HomeBackgroundView
+    private lateinit var frame: FrameLayout
+    private lateinit var videoControls: LinearLayout
+    private lateinit var pauseButton: ImageView
+    private var videoMode = false
+    private val hideControls = Runnable { videoControls.visibility = View.GONE }
     private var webView: WebView? = null
+
+    /** YouTube'i jms täisekraanivaade (WebChromeClient.onShowCustomView). */
+    private var fullscreenView: View? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** Viimase auto ekraani puudutuse aeg; leht saab klaviatuuri avada ainult vahetult pärast seda. */
+    private var lastTapAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window?.setBackgroundDrawable(ColorDrawable(backgroundColor))
-        root = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
+        // Taust katab kogu pinna (ka nuppude ala), sisu (root) jääb nähtavasse alasse.
+        frame = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
+        homeBackground = HomeBackgroundView(context, dark)
+        frame.addView(homeBackground, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        root = FrameLayout(context)
         message = TextView(context).apply {
             setTextColor(textColor)
             textSize = 26f
-            gravity = Gravity.CENTER
-            setPadding(48, 48, 48, 48)
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            setShadowLayer(8f, 0f, 2f, if (dark) Color.BLACK else Color.WHITE)
+            // Parem pool jääb taustal olevale autole.
+            addOnLayoutChangeListener { v, left, _, right, _, _, _, _, _ ->
+                val rightPad = ((right - left) * 0.48f).toInt()
+                if (v.paddingRight != rightPad) v.setPadding(64, 48, rightPad, 48)
+            }
         }
         root.addView(message, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-        setContentView(root)
+        frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        // Video nupud paremas servas keskel üksteise all (Android Auto nupud oleksid
+        // ülal paremal YouTube'i seadete nupu peal).
+        // Nupud mahuvad paremasse äärde (vt videoRightMargin).
+        val buttonSize = (videoRightMargin * 0.86f).toInt().coerceIn(48, (surfaceHeight * 0.14f).toInt().coerceAtLeast(48))
+        videoControls = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+        pauseButton = controlButton(R.drawable.ic_car_pause) { onVideoControl(VideoControl.TOGGLE_PAUSE) }
+        val backButton = controlButton(R.drawable.ic_car_back) { onVideoControl(VideoControl.BACK) }
+        videoControls.addView(pauseButton, LinearLayout.LayoutParams(buttonSize, buttonSize).apply {
+            bottomMargin = buttonSize / 4
+        })
+        videoControls.addView(backButton, LinearLayout.LayoutParams(buttonSize, buttonSize))
+        frame.addView(videoControls, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.END or Gravity.CENTER_VERTICAL,
+        ).apply { marginEnd = ((videoRightMargin - buttonSize) / 2).coerceAtLeast(8) })
+        setContentView(frame)
     }
 
-    /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale. */
+    /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale (v.a video ja brauser, mis täidavad kogu ekraani). */
     fun setVisibleArea(area: Rect) {
+        visibleArea = area
+        applyPadding()
+    }
+
+    private var visibleArea: Rect? = null
+    private var fullBleed = false
+
+    /**
+     * Video-režiimis tühi äär paremal: seal on Android Auto kohustuslik ⓘ-nupp,
+     * mis muidu kataks YouTube'i seadete nuppu. Äär on nii kitsas, et 21:9
+     * video mahub ikka täiskõrgusel (pind 1920×720 ekraanil ~1816×696).
+     */
+    private val videoRightMargin: Int =
+        minOf((surfaceHeight * 0.16f).toInt(), (surfaceWidth - surfaceHeight * 21f / 9f).toInt()).coerceAtLeast(0)
+
+    private fun applyPadding() {
+        val area = visibleArea
+        if (fullBleed && videoMode) {
+            root.setPadding(0, 0, videoRightMargin, 0)
+            return
+        }
+        if (fullBleed || area == null) {
+            root.setPadding(0, 0, 0, 0)
+            return
+        }
         root.setPadding(
             area.left,
             area.top,
@@ -67,22 +145,78 @@ class SurfacePresentation(
         )
     }
 
+    private fun setFullBleed(value: Boolean) {
+        fullBleed = value
+        applyPadding()
+    }
+
+    private fun controlButton(icon: Int, onClick: () -> Unit) = ImageView(context).apply {
+        setImageResource(icon)
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        val pad = (surfaceHeight * 0.035f).toInt()
+        setPadding(pad, pad, pad, pad)
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.argb(170, 32, 33, 36))
+        }
+        setOnClickListener {
+            onClick()
+            showVideoControls()
+        }
+    }
+
+    /** Näitab video nuppe ja peidab need 4 s pärast (nagu Android Auto omad). */
+    private fun showVideoControls() {
+        if (!videoMode) return
+        videoControls.visibility = View.VISIBLE
+        handler.removeCallbacks(hideControls)
+        handler.postDelayed(hideControls, CONTROLS_VISIBLE_MILLIS)
+    }
+
+    fun setVideoPaused(paused: Boolean) {
+        pauseButton.setImageResource(if (paused) R.drawable.ic_car_play else R.drawable.ic_car_pause)
+    }
+
+    private fun setVideoMode(value: Boolean) {
+        videoMode = value
+        frame.setBackgroundColor(if (value) Color.BLACK else backgroundColor)
+        applyPadding()
+        if (!value) {
+            handler.removeCallbacks(hideControls)
+            videoControls.visibility = View.GONE
+        }
+    }
+
     fun showMessage(text: String) {
+        setVideoMode(false)
+        setFullBleed(false)
         destroyWebView()
         message.text = text
         message.visibility = View.VISIBLE
+        homeBackground.visibility = View.VISIBLE
     }
 
     fun showVideo(videoId: String) {
         val origin = "https://${context.packageName}"
+        // Video kogu ekraanile; Android Auto nupud hõljuvad peal ja peituvad ise.
+        setFullBleed(true)
+        setVideoMode(true)
+        setVideoPaused(false)
         newWebView().loadDataWithBaseURL(origin, playerHtml(videoId, origin), "text/html", "utf-8", null)
     }
 
     fun showWeb(url: String) {
+        // Ka brauser kogu ekraanile; nupud hõljuvad peal ja peituvad ise.
+        setFullBleed(true)
+        setVideoMode(false)
         newWebView().loadUrl(url)
     }
 
     fun goBack() {
+        if (fullscreenView != null) {
+            exitFullscreen()
+            return
+        }
         webView?.takeIf { it.canGoBack() }?.goBack()
     }
 
@@ -100,12 +234,43 @@ class SurfacePresentation(
         for (action in intArrayOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
             val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
             event.source = InputDevice.SOURCE_TOUCHSCREEN
-            root.dispatchTouchEvent(event)
+            // frame, et ka video oma nupud puudutuse saaksid.
+            frame.dispatchTouchEvent(event)
             event.recycle()
+        }
+        showVideoControls()
+        // Kui puudutus viib fookuse tekstiväljale (ka veidi hiljem, nt Google'i
+        // otsingukast), on vaja auto klaviatuuri.
+        lastTapAt = SystemClock.uptimeMillis()
+        webView?.evaluateJavascript(WATCH_FOCUS_JS, null)
+    }
+
+    /** Lehe JavaScripti teade: puudutus viis fookuse tekstiväljale. */
+    private inner class InputBridge {
+        @JavascriptInterface
+        fun onEditableFocused() {
+            handler.post {
+                if (SystemClock.uptimeMillis() - lastTapAt <= FOCUS_WATCH_MILLIS) {
+                    lastTapAt = 0L
+                    onEditableTapped()
+                }
+            }
+        }
+    }
+
+    /**
+     * Kirjutab teksti aktiivsele tekstiväljale ja saadab vormi (nt otsingu).
+     * Kui ükski väli pole aktiivne, avab teksti aadressina või Google'i otsinguna.
+     */
+    fun enterText(text: String) {
+        val view = webView ?: return
+        view.evaluateJavascript("($INSERT_TEXT_JS)(${JSONObject.quote(text)})") { inserted ->
+            if (inserted != "true" && webView === view) view.loadUrl(SettingsInput.addressOrSearch(text))
         }
     }
 
     override fun onStop() {
+        handler.removeCallbacksAndMessages(null)
         destroyWebView()
         super.onStop()
     }
@@ -119,18 +284,32 @@ class SurfacePresentation(
     private fun newWebView(): WebView {
         destroyWebView()
         message.visibility = View.GONE
+        homeBackground.visibility = View.GONE
         val view = WebView(context)
         view.setBackgroundColor(backgroundColor)
         view.settings.javaScriptEnabled = true
         view.settings.domStorageEnabled = true
         view.settings.mediaPlaybackRequiresUserGesture = false
         applyDarkMode(view)
+        view.addJavascriptInterface(InputBridge(), BRIDGE)
         view.webViewClient = object : WebViewClient() {
             // Ainult veebilehed: intent:// jms ei tohi telefonis teisi rakendusi avada.
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
                 request.url.scheme !in setOf("http", "https")
         }
-        view.webChromeClient = WebChromeClient()
+        view.webChromeClient = object : WebChromeClient() {
+            override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                if (fullscreenView != null) {
+                    callback.onCustomViewHidden()
+                    return
+                }
+                fullscreenView = view
+                fullscreenCallback = callback
+                root.addView(view, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+            }
+
+            override fun onHideCustomView() = exitFullscreen()
+        }
         root.addView(view, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         webView = view
         return view
@@ -151,12 +330,70 @@ class SurfacePresentation(
         }
     }
 
+    private fun exitFullscreen() {
+        val view = fullscreenView ?: return
+        fullscreenView = null
+        root.removeView(view)
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+    }
+
     private fun destroyWebView() {
+        exitFullscreen()
         val view = webView ?: return
         webView = null
         view.loadUrl("about:blank")
         root.removeView(view)
         view.destroy()
+    }
+
+    private companion object {
+        const val CONTROLS_VISIBLE_MILLIS = 4_000L
+        const val BRIDGE = "ParkedVideoInput"
+        const val FOCUS_WATCH_MILLIS = 1_500L
+
+        /** Kontrollib kohe ja veel 1,5 s jooksul, kas fookus on tekstiväljal. */
+        val WATCH_FOCUS_JS = """(function() {
+            function editable(e) {
+                if (!e) return false;
+                if (e.isContentEditable || e.tagName == 'TEXTAREA') return true;
+                return e.tagName == 'INPUT' &&
+                    /^(text|search|email|url|tel|number|password|)$/i.test(e.getAttribute('type') || '');
+            }
+            function report() { $BRIDGE.onEditableFocused(); }
+            if (window.__pvFocus) document.removeEventListener('focusin', window.__pvFocus, true);
+            window.__pvFocus = function(ev) {
+                if (editable(ev.target)) {
+                    document.removeEventListener('focusin', window.__pvFocus, true);
+                    report();
+                }
+            };
+            document.addEventListener('focusin', window.__pvFocus, true);
+            setTimeout(function() { document.removeEventListener('focusin', window.__pvFocus, true); }, $FOCUS_WATCH_MILLIS);
+        })()"""
+
+        /** Seab välja väärtuse nii, et ka Reacti jms raamistike lehed selle märkaksid, ja saadab vormi. */
+        const val INSERT_TEXT_JS = """function(t) {
+            var e = document.activeElement;
+            if (!e || !(e.isContentEditable || e.tagName == 'INPUT' || e.tagName == 'TEXTAREA')) return false;
+            if (e.isContentEditable) {
+                document.execCommand('insertText', false, t);
+            } else {
+                var setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), 'value').set;
+                setter.call(e, t);
+            }
+            e.dispatchEvent(new Event('input', {bubbles: true}));
+            e.dispatchEvent(new Event('change', {bubbles: true}));
+            if (e.tagName == 'TEXTAREA' || e.isContentEditable) return true;
+            if (e.form) {
+                if (e.form.requestSubmit) e.form.requestSubmit(); else e.form.submit();
+            } else {
+                ['keydown', 'keypress', 'keyup'].forEach(function(type) {
+                    e.dispatchEvent(new KeyboardEvent(type, {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true}));
+                });
+            }
+            return true;
+        }"""
     }
 
     private fun playerHtml(videoId: String, origin: String) = """
@@ -167,7 +404,7 @@ class SurfacePresentation(
         </head><body>
         <iframe id="p"
           src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&enablejsapi=1&origin=$origin"
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen
           referrerpolicy="strict-origin-when-cross-origin"></iframe>
         <script>
           function cmd(f) {
@@ -178,3 +415,6 @@ class SurfacePresentation(
         </body></html>
     """.trimIndent()
 }
+
+/** Video oma nupud auto ekraanil. */
+enum class VideoControl { TOGGLE_PAUSE, BACK }

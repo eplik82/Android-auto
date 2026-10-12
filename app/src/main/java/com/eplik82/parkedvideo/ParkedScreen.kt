@@ -2,14 +2,18 @@ package com.eplik82.parkedvideo
 
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import androidx.car.app.AppManager
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.CarIcon
 import androidx.car.app.model.Template
 import androidx.car.app.navigation.model.NavigationTemplate
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
@@ -26,14 +30,27 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     private enum class Mode { IDLE, VIDEO, WEB }
 
     private val settings = AppSettings(carContext)
-    private val renderer = SurfaceRenderer(carContext)
+    private val renderer = SurfaceRenderer(
+        carContext,
+        onEditableTapped = { openKeyboard() },
+        onVideoControl = { control ->
+            when (control) {
+                VideoControl.TOGGLE_PAUSE -> togglePause()
+                VideoControl.BACK -> close()
+            }
+        },
+    )
     private val monitor = ParkingMonitor(
         carContext,
         stationaryMillis = { settings.stationarySeconds * 1000L },
         onStateChange = { onParkingChanged() },
         onSpeedUpdate = { if (mode == Mode.IDLE) renderer.showMessage(fullStatus()) },
     )
-    private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+    private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == AppSettings.KEY_PLAY_REQUEST) {
+            onPlayRequested()
+            return@OnSharedPreferenceChangeListener
+        }
         applyTheme()
         monitor.simulation = settings.simulatedMotion
         if (settings.speedSource != monitor.sourceType) startMonitoring()
@@ -41,6 +58,18 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private var permissionDenied = false
+
+    /** Telefonis jagati video: mängi kohe, kui auto on pargitud (või saab pargituks ilma vahepeal sõitmata). */
+    private var pendingPlay = false
+    private val handler = Handler(Looper.getMainLooper())
+
+    /** Kuni luba puudub, vaatab perioodiliselt, kas see on telefonis antud. */
+    private val permissionPoll = object : Runnable {
+        override fun run() {
+            recheckPermission()
+            if (permissionDenied) handler.postDelayed(this, PERMISSION_POLL_MILLIS)
+        }
+    }
     private var mode = Mode.IDLE
     private var paused = false
 
@@ -52,10 +81,15 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
                 applyTheme()
                 monitor.simulation = settings.simulatedMotion
                 startMonitoring()
+                // Video jagati veidi enne Android Autoga ühendamist.
+                if (System.currentTimeMillis() - settings.playRequestAt < RECENT_SHARE_MILLIS) onPlayRequested()
                 refresh()
             }
 
+            override fun onResume(owner: LifecycleOwner) = recheckPermission()
+
             override fun onDestroy(owner: LifecycleOwner) {
+                handler.removeCallbacks(permissionPoll)
                 settings.unregisterListener(settingsListener)
                 monitor.stop()
                 renderer.release()
@@ -71,11 +105,14 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         val template = NavigationTemplate.Builder()
         when {
             mode == Mode.VIDEO -> {
-                actions.addAction(action(if (paused) R.string.car_resume else R.string.car_pause) { togglePause() })
-                actions.addAction(action(R.string.car_stop) { close() })
+                // Paus ja Tagasi joonistab rakendus ise paremasse serva keskele
+                // (SurfacePresentation), et need ei kataks YouTube'i nuppe ülal paremal.
+                // Ülemine riba on kohustuslik – sinna ainult väike infoikoon.
+                actions.addAction(iconAction(R.drawable.ic_car_info) { screenManager.push(CarInfoScreen(carContext)) })
             }
             mode == Mode.WEB -> {
                 actions.addAction(action(R.string.car_back) { renderer.goBack() })
+                actions.addAction(action(R.string.car_text) { openKeyboard() })
                 actions.addAction(action(R.string.car_close) { close() })
                 // PAN lubab lehte auto ekraanil kerida.
                 template.setMapActionStrip(ActionStrip.Builder().addAction(Action.PAN).build())
@@ -93,28 +130,60 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         return template.setActionStrip(actions.build()).build()
     }
 
+    /**
+     * Õigusi auto ekraanil ei küsita: CarContext.requestPermissions avab
+     * telefonis tegevuse auto ekraanile, mida uuem Android keelab
+     * (SecurityException → krahh). Luba antakse telefoni rakenduses
+     * ([MainActivity]); siin ainult kontrollitakse ja näidatakse teadet.
+     */
     private fun startMonitoring() {
         val type = settings.speedSource
-        val required = type.permissions.first()
-        if (carContext.checkSelfPermission(required) == PackageManager.PERMISSION_GRANTED) {
-            permissionDenied = false
-            monitor.start(type)
-            return
-        }
+        permissionDenied = !hasPermission(type)
         // Kuni luba pole, jääb allikas teadmata olekusse (video lukus).
         monitor.start(type)
-        carContext.requestPermissions(type.permissions) { granted, _ ->
-            if (settings.speedSource != type) return@requestPermissions
-            permissionDenied = required !in granted
-            if (!permissionDenied) monitor.start(type)
-            refresh()
+        handler.removeCallbacks(permissionPoll)
+        if (permissionDenied) handler.postDelayed(permissionPoll, PERMISSION_POLL_MILLIS)
+    }
+
+    /** Luba võidi vahepeal telefonis anda – siis alusta kuulamist uuesti. */
+    private fun recheckPermission() {
+        if (!permissionDenied || !hasPermission(settings.speedSource)) return
+        startMonitoring()
+        refresh()
+    }
+
+    private fun hasPermission(type: SpeedSourceType) =
+        carContext.checkSelfPermission(type.permissions.first()) == PackageManager.PERMISSION_GRANTED
+
+    private fun onPlayRequested() {
+        when (monitor.state) {
+            ParkingState.PARKED -> playShared()
+            ParkingState.MOVING -> {
+                pendingPlay = false
+                toast(R.string.car_locked_toast)
+            }
+            // Ootab paigalseisu aega (või kiiruse andmeid) – mängib, kui auto saab pargituks.
+            else -> pendingPlay = true
         }
     }
 
+    private fun playShared() {
+        pendingPlay = false
+        // Klaviatuur või „Auto info“ võib olla peal – video tuleb ette.
+        screenManager.popToRoot()
+        startVideo()
+    }
+
     private fun onParkingChanged() {
+        if (monitor.state == ParkingState.MOVING) pendingPlay = false
+        if (monitor.state == ParkingState.PARKED && pendingPlay) {
+            playShared()
+            return
+        }
         if (monitor.state != ParkingState.PARKED) {
             mode = Mode.IDLE
             paused = false
+            if (screenManager.top is TextInputScreen) screenManager.pop()
         }
         refresh()
     }
@@ -143,6 +212,14 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         mode = Mode.WEB
         renderer.openWeb(settings.homeUrl)
         invalidate()
+    }
+
+    /** Auto klaviatuur: tekst läheb aktiivsele väljale või aadressiribale. */
+    private fun openKeyboard() {
+        if (mode != Mode.WEB || screenManager.top !== this) return
+        screenManager.push(TextInputScreen(carContext) { text ->
+            if (mode == Mode.WEB) renderer.enterText(text)
+        })
     }
 
     private fun togglePause() {
@@ -177,7 +254,6 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private fun simulationNote(): String = when {
-        monitor.simulationIgnored -> "\n\n" + carContext.getString(R.string.car_test_ignored)
         monitor.simulation == SimulatedMotion.MOVING -> "\n\n" + carContext.getString(R.string.car_test_moving)
         monitor.simulation == SimulatedMotion.STATIONARY -> "\n\n" + carContext.getString(R.string.car_test_stationary)
         else -> ""
@@ -198,8 +274,19 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
 
     private fun infoAction() = action(R.string.car_info) { screenManager.push(CarInfoScreen(carContext)) }
 
+    private fun iconAction(icon: Int, onClick: () -> Unit): Action =
+        Action.Builder()
+            .setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, icon)).build())
+            .setOnClickListener { onClick() }
+            .build()
+
     private fun action(title: Int, onClick: () -> Unit): Action =
         Action.Builder().setTitle(carContext.getString(title)).setOnClickListener { onClick() }.build()
 
     private fun toast(text: Int) = CarToast.makeText(carContext, text, CarToast.LENGTH_LONG).show()
+
+    private companion object {
+        const val PERMISSION_POLL_MILLIS = 2_000L
+        const val RECENT_SHARE_MILLIS = 120_000L
+    }
 }

@@ -14,21 +14,23 @@
     <string name="setup_speed_car">Auto (sõiduki kiirusandur)</string>
     <string name="setup_speed_gps">Telefoni GPS</string>
     <string name="setup_speed_info">Auto andur on täpseim. Vali GPS, kui auto ekraanil on „Kiirus (auto): andmed puuduvad“. GPS-iga loetakse seisvaks kiirus kuni ~4 km/h; tunnelis ja parkimismajas võib signaal kaduda ning siis jääb video lukku.</string>
+    <string name="setup_car_speed_denied">Auto kiiruse kasutamiseks luba rakendusele juurdepääs auto andmetele (Seaded → Rakendused → Pargitud video → Load).</string>
     <string name="setup_location_denied">GPS-i kasutamiseks luba rakendusele asukoht (täpne asukoht).</string>
     <string name="setup_theme_label">Päeva/öö režiim</string>
     <string name="setup_theme_auto">Automaatne (auto järgi)</string>
     <string name="setup_theme_day">Päev (hele)</string>
     <string name="setup_theme_night">Öö (tume)</string>
     <string name="setup_save">Salvesta</string>
+    <string name="setup_shared">Video valitud. Auto ekraanil hakkab see kohe mängima, kui auto on pargitud.</string>
     <string name="setup_saved">Salvestatud. Ava Android Autos „Pargitud video“.</string>
     <string name="setup_invalid_video">Sellest lingist ei leitud YouTube\'i video ID-d.</string>
     <string name="setup_invalid_url">Avaleht peab olema veebiaadress, nt www.google.com.</string>
     <string name="setup_invalid_stationary">Paigalseismise aeg peab olema %1$d–%2$d sekundit.</string>
-    <string name="setup_info">Video ja brauser avanevad auto ekraanil ainult siis, kui auto on määratud aja katkematult paigal seisnud, ja sulguvad kohe, kui auto liikuma hakkab. Ilma kiiruseandmeteta neid ei avata. Lühim lubatud aeg on 30 sekundit, et need ei avaneks foori taga.\n\nAutomaatne režiim järgib auto päeva/öö olekut (nt esitulesid).\n\nPaigaldamine: autos ilmub rakendus ainult siis, kui see on paigaldatud Google Play kaudu (nt sisemine jagamine). Käsitsi paigaldatud APK töötab ainult arvutis DHU emulaatoriga.</string>
+    <string name="setup_info">Video ja brauser avanevad auto ekraanil ainult siis, kui auto on määratud aja katkematult paigal seisnud, ja sulguvad kohe, kui auto liikuma hakkab. Ilma kiiruseandmeteta neid ei avata. Lühim lubatud aeg on 1 sekund; vaikimisi 30 sekundit, et need ei avaneks foori taga.\n\nAutomaatne režiim järgib auto päeva/öö olekut (nt esitulesid).\n\nPaigaldamine: autos ilmub rakendus ainult siis, kui see on paigaldatud Google Play kaudu (nt sisemine jagamine). Käsitsi paigaldatud APK töötab ainult arvutis DHU emulaatoriga.</string>
 
     <!-- Testimine -->
     <string name="test_label">Testimine</string>
-    <string name="test_info">Testi rakendust ilma sõitmata, nt arvutis Android Auto emulaatoriga (DHU). „Telefon seisab“ kehtib ainult siis, kui auto päris kiirust ei anna – päris autos kehtib alati tegelik kiirus. Ka testis tuleb oodata määratud paigalseismise aeg.</string>
+    <string name="test_info">Testi rakendust ilma sõitmata, nt arvutis Android Auto emulaatoriga (DHU). Testnupud kehtivad alati – auto ja GPS-i kiirust testi ajal ei arvestata. „Telefon seisab“ ajal saab videot avada ka sõidu ajal, seega lõpeta test enne sõitu. Ka testis tuleb oodata määratud paigalseismise aeg.</string>
     <string name="test_moving">Telefon liigub</string>
     <string name="test_stationary">Telefon seisab</string>
     <string name="test_off">Lõpeta test</string>
@@ -53,23 +55,25 @@
     <string name="car_stop">Stopp</string>
     <string name="car_back">Tagasi</string>
     <string name="car_close">Sulge</string>
+    <string name="car_text">Tekst</string>
+    <string name="car_text_hint">Tekst, aadress või otsing</string>
+    <string name="car_text_info">Kirjuta tekst ja vajuta klaviatuuril otsingunuppu. Kui lehel on tekstiväli valitud, läheb tekst sinna, muidu avatakse aadress või Google\'i otsing.</string>
     <string name="car_locked">Ainult pargitult</string>
     <string name="car_locked_toast">Video ja brauser on lubatud ainult siis, kui auto on pargitud.</string>
     <string name="car_no_video_toast">Vali telefonis rakenduses „Pargitud video“ YouTube\'i video.</string>
     <string name="car_msg_unknown">Sõidukiiruse andmed puuduvad.\nVideo ja brauser on lubatud ainult siis, kui auto seisab.</string>
-    <string name="car_msg_no_permission">Kiiruse luba puudub.\nLuba telefonis „Pargitud video“ juurdepääs auto kiirusele.</string>
+    <string name="car_msg_no_permission">Kiiruse luba puudub.\nAva telefonis rakendus „Pargitud video“ ja luba juurdepääs auto andmetele.</string>
     <string name="car_msg_moving">Sõidu ajal videot ega brauserit ei näidata.</string>
     <string name="car_msg_waiting">Auto seisab.\nVideo ja brauseri saab avada, kui auto on %1$d s paigal olnud.</string>
     <string name="car_msg_parked">Auto on pargitud.\nVali „Video“ või „Brauser“.</string>
-    <string name="car_msg_no_location_permission">Asukoha luba puudub.\nLuba telefonis „Pargitud video“ juurdepääs täpsele asukohale.</string>
+    <string name="car_msg_no_location_permission">Asukoha luba puudub.\nAva telefonis rakendus „Pargitud video“ ja luba täpne asukoht.</string>
     <string name="car_source_car">auto</string>
     <string name="car_source_gps">GPS</string>
     <string name="car_speed_line">Kiirus (%1$s): %2$s</string>
     <string name="car_speed_kmh">%1$d km/h</string>
     <string name="car_speed_none">andmed puuduvad</string>
     <string name="car_test_moving">[Testrežiim: telefon liigub]</string>
-    <string name="car_test_stationary">[Testrežiim: telefon seisab]</string>
-    <string name="car_test_ignored">[Testrežiim „seisab“ ei kehti – auto annab päris kiiruse]</string>
+    <string name="car_test_stationary">[Testrežiim: telefon seisab – päris kiirust ei arvestata]</string>
 
     <!-- Auto info (diagnostika) -->
     <string name="car_info">Info</string>

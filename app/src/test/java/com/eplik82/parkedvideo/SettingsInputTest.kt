@@ -7,6 +7,7 @@ import org.junit.Test
 class SettingsInputTest {
     @Test
     fun acceptsStationarySecondsWithinRange() {
+        assertEquals(1, SettingsInput.parseStationarySeconds("1"))
         assertEquals(30, SettingsInput.parseStationarySeconds("30"))
         assertEquals(90, SettingsInput.parseStationarySeconds(" 90 "))
         assertEquals(600, SettingsInput.parseStationarySeconds("600"))
@@ -16,7 +17,6 @@ class SettingsInputTest {
     fun rejectsStationarySecondsOutsideRange() {
         assertNull(SettingsInput.parseStationarySeconds(""))
         assertNull(SettingsInput.parseStationarySeconds("0"))
-        assertNull(SettingsInput.parseStationarySeconds("29"))
         assertNull(SettingsInput.parseStationarySeconds("601"))
         assertNull(SettingsInput.parseStationarySeconds("-5"))
         assertNull(SettingsInput.parseStationarySeconds("abc"))
@@ -28,6 +28,13 @@ class SettingsInputTest {
         assertEquals("https://err.ee/uudised", SettingsInput.normalizeUrl(" err.ee/uudised "))
         assertEquals("http://example.com", SettingsInput.normalizeUrl("http://example.com"))
         assertEquals("HTTPS://Example.com", SettingsInput.normalizeUrl("HTTPS://Example.com"))
+    }
+
+    @Test
+    fun addressOrSearch() {
+        assertEquals("https://err.ee", SettingsInput.addressOrSearch("err.ee"))
+        assertEquals("https://www.google.com/search?q=ilm+tallinn", SettingsInput.addressOrSearch(" ilm tallinn "))
+        assertEquals("https://www.google.com/search?q=%C3%B5un", SettingsInput.addressOrSearch("õun"))
     }
 
     @Test

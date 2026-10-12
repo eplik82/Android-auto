@@ -1,7 +1,6 @@
 package com.eplik82.parkedvideo
 
 import android.app.Activity
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
@@ -49,13 +48,28 @@ class MainActivity : Activity() {
         findViewById<TextView>(R.id.compat_text).text =
             CompatibilityReport.build(this) + "\n\n" + getString(R.string.compat_hint)
 
-        if (savedInstanceState == null) loadFields()
-        handleShare(intent)
+        if (savedInstanceState == null) {
+            loadFields()
+            requestMissingPermissions()
+        }
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        handleShare(intent)
+    /** Video võidi vahepeal YouTube'ist jagada (ShareActivity) – näita seda, et „Salvesta“ seda üle ei kirjutaks. */
+    override fun onResume() {
+        super.onResume()
+        val shared = settings.videoId?.let { "https://youtu.be/$it" }.orEmpty()
+        if (YouTubeIds.parse(videoInput.text.toString()) != settings.videoId) videoInput.setText(shared)
+    }
+
+    /**
+     * Auto andmete (ja GPS-i puhul asukoha) load küsitakse telefonis, sest
+     * auto ekraanilt küsimine jookseb uuemal Androidil kokku.
+     */
+    private fun requestMissingPermissions() {
+        val wanted = CAR_PERMISSIONS +
+            if (settings.speedSource == SpeedSourceType.GPS) SpeedSourceType.GPS.permissions else emptyList()
+        val missing = wanted.filterNot(::hasPermission)
+        if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), REQUEST_PERMISSIONS)
     }
 
     private fun loadFields() {
@@ -76,8 +90,12 @@ class MainActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_LOCATION && !hasPermission(SpeedSourceType.GPS.permissions.first())) {
-            status.setText(R.string.setup_location_denied)
+        if (requestCode != REQUEST_PERMISSIONS) return
+        val source = settings.speedSource
+        if (!hasPermission(source.permissions.first())) {
+            status.setText(
+                if (source == SpeedSourceType.GPS) R.string.setup_location_denied else R.string.setup_car_speed_denied
+            )
         }
     }
 
@@ -99,19 +117,6 @@ class MainActivity : Activity() {
                 SimulatedMotion.STATIONARY -> R.string.test_status_stationary
             }
         )
-    }
-
-    private fun handleShare(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val shared = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-        val id = YouTubeIds.parse(shared)
-        if (id == null) {
-            status.setText(R.string.setup_invalid_video)
-            return
-        }
-        settings.videoId = id
-        videoInput.setText("https://youtu.be/$id")
-        status.setText(R.string.setup_saved)
     }
 
     private fun save() {
@@ -155,14 +160,21 @@ class MainActivity : Activity() {
         homeUrlInput.setText(homeUrl)
         status.setText(R.string.setup_saved)
 
-        if (speedSource == SpeedSourceType.GPS && !hasPermission(speedSource.permissions.first())) {
-            requestPermissions(speedSource.permissions.toTypedArray(), REQUEST_LOCATION)
+        if (!hasPermission(speedSource.permissions.first())) {
+            requestPermissions(speedSource.permissions.toTypedArray(), REQUEST_PERMISSIONS)
         }
 
         if (themeChanged) recreate()
     }
 
     private companion object {
-        const val REQUEST_LOCATION = 1
+        const val REQUEST_PERMISSIONS = 1
+
+        /** Kiirus (pargitud oleku jaoks) ning „Auto info“ kütuse/aku ja läbisõidu andmed. */
+        val CAR_PERMISSIONS = listOf(
+            "com.google.android.gms.permission.CAR_SPEED",
+            "com.google.android.gms.permission.CAR_FUEL",
+            "com.google.android.gms.permission.CAR_MILEAGE",
+        )
     }
 }

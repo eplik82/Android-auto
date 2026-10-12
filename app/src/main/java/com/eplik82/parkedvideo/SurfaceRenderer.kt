@@ -12,7 +12,11 @@ import androidx.car.app.SurfaceContainer
  * virtuaalse ekraani kaudu. Hoiab meeles, mida peab näitama, et pinna või
  * teema vahetusel sisu taastuks.
  */
-class SurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
+class SurfaceRenderer(
+    private val carContext: CarContext,
+    private val onEditableTapped: () -> Unit,
+    private val onVideoControl: (VideoControl) -> Unit,
+) : SurfaceCallback {
 
     private sealed interface Content {
         data class Message(val text: String) : Content
@@ -30,6 +34,13 @@ class SurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
 
     override fun onSurfaceAvailable(surfaceContainer: SurfaceContainer) {
         val surface = surfaceContainer.surface ?: return
+        val display = virtualDisplay
+        // Sama suurusega pind tagasi (nt klaviatuuriekraanilt): jätka sama sisuga,
+        // et veebileht ja aktiivne tekstiväli säiliksid.
+        if (display != null && surfaceContainer.width == surfaceWidth && surfaceContainer.height == surfaceHeight) {
+            display.surface = surface
+            return
+        }
         release()
         surfaceWidth = surfaceContainer.width
         surfaceHeight = surfaceContainer.height
@@ -44,7 +55,10 @@ class SurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
         createPresentation()
     }
 
-    override fun onSurfaceDestroyed(surfaceContainer: SurfaceContainer) = release()
+    /** Pind võib kaduda ajutiselt (teine mall ees) – sisu jääb alles, kuni ekraan suletakse. */
+    override fun onSurfaceDestroyed(surfaceContainer: SurfaceContainer) {
+        virtualDisplay?.surface = null
+    }
 
     override fun onVisibleAreaChanged(visibleArea: Rect) {
         this.visibleArea = visibleArea
@@ -83,9 +97,17 @@ class SurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
 
     fun goBack() = presentation?.goBack()
 
-    fun pause() = presentation?.pause()
+    fun enterText(text: String) = presentation?.enterText(text)
 
-    fun resume() = presentation?.resume()
+    fun pause() {
+        presentation?.pause()
+        presentation?.setVideoPaused(true)
+    }
+
+    fun resume() {
+        presentation?.resume()
+        presentation?.setVideoPaused(false)
+    }
 
     fun release() {
         presentation?.dismiss()
@@ -98,7 +120,7 @@ class SurfaceRenderer(private val carContext: CarContext) : SurfaceCallback {
         presentation?.dismiss()
         presentation = null
         val display = virtualDisplay?.display ?: return
-        presentation = SurfacePresentation(carContext, display, dark, surfaceWidth, surfaceHeight).also {
+        presentation = SurfacePresentation(carContext, display, dark, surfaceWidth, surfaceHeight, onEditableTapped, onVideoControl).also {
             it.show()
             visibleArea?.let(it::setVisibleArea)
         }

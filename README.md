@@ -6,13 +6,16 @@ sirvida veebi auto ekraanilt, **kuid ainult siis, kui auto on pargitud**.
 ## Kuidas see töötab
 
 - Telefonis valitakse video: kleebi link rakendusse „Pargitud video“ või
-  jaga see YouTube'ist (Jaga → Pargitud video).
+  jaga see YouTube'ist (Jaga → Pargitud video; YouTube jääb lahti). Jagatud video hakkab auto
+  ekraanil kohe mängima, kui auto on pargitud (seisva, kuid veel mitte
+  pargitud auto puhul siis, kui ooteaeg täis saab; sõit tühistab selle).
 - Auto ekraanil ilmuvad nupud „Video“ ja „Brauser“ alles siis, kui auto on
-  seadetes määratud aja (vaikimisi **30 s**, lubatud 30–600 s) katkematult
+  seadetes määratud aja (vaikimisi **30 s**, lubatud 1–600 s) katkematult
   paigal seisnud. Lühike peatus, näiteks foori taga, neid ei ava.
 - Brauser avab seadetes määratud avalehe. Lehel saab puudutada linke ja
-  kerida, nupp „Tagasi“ liigub eelmisele lehele. Teksti saab sisestada ainult
-  telefonis (avalehe aadress), sest auto ekraanil klaviatuuri pole.
+  kerida, nupp „Tagasi“ liigub eelmisele lehele. Tekstivälja puudutamisel (või
+  nupuga „Tekst“) avaneb auto klaviatuur ja tekst läheb sellele väljale;
+  ilma valitud väljata avatakse sisestatud aadress või Google'i otsing.
 - Kui auto hakkab liikuma (üle ~1 km/h), suletakse video või brauser kohe
   koos heliga. Uuesti pargituna tuleb need jälle käsitsi avada.
 - Kui auto kiiruseandmeid pole või luba puudub, midagi ei näidata.
@@ -50,12 +53,20 @@ Android Auto loendit lühendada.
 | YouTube'i video | Link või video ID; saab ka YouTube'ist jagada |
 | Brauseri avaleht | Nt `www.google.com` |
 | Kiiruse allikas | Auto või telefoni GPS (vt eespool) |
-| Paigalseismise aeg | 30–600 sekundit enne video/brauseri lubamist |
+| Paigalseismise aeg | 1–600 sekundit enne video/brauseri lubamist |
 | Päeva/öö režiim | Automaatne (auto järgi, nt esitulede sisselülitamisel), Päev või Öö. Mõjutab auto ekraani teateid, veebilehti (tume teema toega lehed) ja telefoni seadete vaadet |
 
 Android Auto ei anna rakendustele käigu- ega seisupiduri infot, seega
 otsustatakse pargitud olek ainult kiiruse järgi. Kasuta rakendust ainult
 päriselt pargitud autos.
+
+## Avaekraani taust
+
+Auto ekraani avalehel on koodiga joonistatud Ioniq 5 „parametric pixel“
+stiilis taust (ruudud paremal, hõrenevad vasakule). Oma pildi kasutamiseks pane see
+telefoni faili `Android/data/com.eplik82.parkedvideo/files/background.jpg`
+(või `.png`), nt `adb push pilt.jpg /sdcard/Android/data/com.eplik82.parkedvideo/files/background.jpg`.
+Pilt lõigatakse ekraani mõõtu; Hyundai fotosid repos pole (avalik repo).
 
 ## Testimine
 
@@ -64,10 +75,10 @@ Telefoni seadete all on nupud **„Telefon liigub“**, **„Telefon seisab“**
 märge `[Testrežiim …]`.
 
 - „Telefon liigub“ kehtib alati: video või brauser sulgub kohe.
-- „Telefon seisab“ kehtib ainult siis, kui kiiruse luba on antud, aga auto
-  päris kiirust ei anna (nt arvutis Android Auto emulaatoriga DHU). Päris
-  autos kehtib alati tegelik kiirus, seega testnupuga ei saa sõidu ajal
-  videot avada. Ka testis tuleb oodata määratud paigalseismise aeg.
+- „Telefon seisab“ kehtib samuti alati: auto ja GPS-i kiirust (ka
+  emulaatori DHU antud kiirust) testi ajal ei arvestata. Seetõttu saab
+  testi ajal videot avada ka sõites – vajuta enne sõitu „Lõpeta test“.
+  Ka testis tuleb oodata määratud paigalseismise aeg.
 
 ## Paigaldamine
 
