@@ -10,8 +10,10 @@ import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.CarIcon
 import androidx.car.app.model.Template
 import androidx.car.app.navigation.model.NavigationTemplate
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
@@ -94,8 +96,16 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         val template = NavigationTemplate.Builder()
         when {
             mode == Mode.VIDEO -> {
-                actions.addAction(action(if (paused) R.string.car_resume else R.string.car_pause) { togglePause() })
-                actions.addAction(action(R.string.car_stop) { close() })
+                // Paus ja Tagasi paremas servas keskel üksteise all (map action strip),
+                // et need ei kataks YouTube'i nuppe ülal paremal.
+                template.setMapActionStrip(
+                    ActionStrip.Builder()
+                        .addAction(iconAction(if (paused) R.drawable.ic_car_play else R.drawable.ic_car_pause) { togglePause() })
+                        .addAction(iconAction(R.drawable.ic_car_back) { close() })
+                        .build()
+                )
+                // Ülemine riba on kohustuslik – sinna ainult väike infoikoon.
+                actions.addAction(iconAction(R.drawable.ic_car_info) { screenManager.push(CarInfoScreen(carContext)) })
             }
             mode == Mode.WEB -> {
                 actions.addAction(action(R.string.car_back) { renderer.goBack() })
@@ -260,6 +270,12 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private fun infoAction() = action(R.string.car_info) { screenManager.push(CarInfoScreen(carContext)) }
+
+    private fun iconAction(icon: Int, onClick: () -> Unit): Action =
+        Action.Builder()
+            .setIcon(CarIcon.Builder(IconCompat.createWithResource(carContext, icon)).build())
+            .setOnClickListener { onClick() }
+            .build()
 
     private fun action(title: Int, onClick: () -> Unit): Action =
         Action.Builder().setTitle(carContext.getString(title)).setOnClickListener { onClick() }.build()

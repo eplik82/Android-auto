@@ -316,7 +316,9 @@ class SurfacePresentation(
         <!DOCTYPE html>
         <html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style>
+        <style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
+        iframe{border:0;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+          width:min(100vw,177.78vh);height:min(100vh,56.25vw)}</style>
         </head><body>
         <iframe id="p"
           src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&enablejsapi=1&origin=$origin"
