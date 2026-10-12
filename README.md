@@ -6,7 +6,9 @@ sirvida veebi auto ekraanilt, **kuid ainult siis, kui auto on pargitud**.
 ## Kuidas see töötab
 
 - Telefonis valitakse video: kleebi link rakendusse „Pargitud video“ või
-  jaga see YouTube'ist (Jaga → Pargitud video).
+  jaga see YouTube'ist (Jaga → Pargitud video). Jagatud video hakkab auto
+  ekraanil kohe mängima, kui auto on pargitud (seisva, kuid veel mitte
+  pargitud auto puhul siis, kui ooteaeg täis saab; sõit tühistab selle).
 - Auto ekraanil ilmuvad nupud „Video“ ja „Brauser“ alles siis, kui auto on
   seadetes määratud aja (vaikimisi **30 s**, lubatud 1–600 s) katkematult
   paigal seisnud. Lühike peatus, näiteks foori taga, neid ei ava.

@@ -37,6 +37,12 @@ class AppSettings(context: Context) {
             ?: SimulatedMotion.OFF
         set(value) = prefs.edit().putString(KEY_SIMULATION, value.name).apply()
 
+    /** Millal telefonis viimati videot jagati – auto ekraan alustab siis kohe esitust. */
+    val playRequestAt: Long
+        get() = prefs.getLong(KEY_PLAY_REQUEST, 0L)
+
+    fun requestPlay() = prefs.edit().putLong(KEY_PLAY_REQUEST, System.currentTimeMillis()).apply()
+
     /** Kas kasutada tumedat kujundust; AUTO puhul otsustab [autoDark] (auto või telefoni süsteem). */
     fun isDark(autoDark: Boolean): Boolean = when (themeMode) {
         ThemeMode.AUTO -> autoDark
@@ -57,6 +63,7 @@ class AppSettings(context: Context) {
         private const val KEY_THEME = "theme"
         private const val KEY_SIMULATION = "simulated_motion"
         private const val KEY_SPEED_SOURCE = "speed_source"
+        const val KEY_PLAY_REQUEST = "play_request"
 
         fun isSystemDark(context: Context): Boolean =
             context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES

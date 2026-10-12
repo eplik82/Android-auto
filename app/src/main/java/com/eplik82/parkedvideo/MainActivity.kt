@@ -128,8 +128,9 @@ class MainActivity : Activity() {
             return
         }
         settings.videoId = id
+        settings.requestPlay()
         videoInput.setText("https://youtu.be/$id")
-        status.setText(R.string.setup_saved)
+        status.setText(R.string.setup_shared)
     }
 
     private fun save() {

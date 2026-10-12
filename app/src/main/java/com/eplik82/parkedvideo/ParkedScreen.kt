@@ -35,7 +35,11 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         onStateChange = { onParkingChanged() },
         onSpeedUpdate = { if (mode == Mode.IDLE) renderer.showMessage(fullStatus()) },
     )
-    private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+    private val settingsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == AppSettings.KEY_PLAY_REQUEST) {
+            onPlayRequested()
+            return@OnSharedPreferenceChangeListener
+        }
         applyTheme()
         monitor.simulation = settings.simulatedMotion
         if (settings.speedSource != monitor.sourceType) startMonitoring()
@@ -43,6 +47,9 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private var permissionDenied = false
+
+    /** Telefonis jagati video: mängi kohe, kui auto on pargitud (või saab pargituks ilma vahepeal sõitmata). */
+    private var pendingPlay = false
     private val handler = Handler(Looper.getMainLooper())
 
     /** Kuni luba puudub, vaatab perioodiliselt, kas see on telefonis antud. */
@@ -63,6 +70,8 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
                 applyTheme()
                 monitor.simulation = settings.simulatedMotion
                 startMonitoring()
+                // Video jagati veidi enne Android Autoga ühendamist.
+                if (System.currentTimeMillis() - settings.playRequestAt < RECENT_SHARE_MILLIS) onPlayRequested()
                 refresh()
             }
 
@@ -133,7 +142,31 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     private fun hasPermission(type: SpeedSourceType) =
         carContext.checkSelfPermission(type.permissions.first()) == PackageManager.PERMISSION_GRANTED
 
+    private fun onPlayRequested() {
+        when (monitor.state) {
+            ParkingState.PARKED -> playShared()
+            ParkingState.MOVING -> {
+                pendingPlay = false
+                toast(R.string.car_locked_toast)
+            }
+            // Ootab paigalseisu aega (või kiiruse andmeid) – mängib, kui auto saab pargituks.
+            else -> pendingPlay = true
+        }
+    }
+
+    private fun playShared() {
+        pendingPlay = false
+        // Klaviatuur või „Auto info“ võib olla peal – video tuleb ette.
+        screenManager.popToRoot()
+        startVideo()
+    }
+
     private fun onParkingChanged() {
+        if (monitor.state == ParkingState.MOVING) pendingPlay = false
+        if (monitor.state == ParkingState.PARKED && pendingPlay) {
+            playShared()
+            return
+        }
         if (monitor.state != ParkingState.PARKED) {
             mode = Mode.IDLE
             paused = false
@@ -235,5 +268,6 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
 
     private companion object {
         const val PERMISSION_POLL_MILLIS = 2_000L
+        const val RECENT_SHARE_MILLIS = 120_000L
     }
 }
