@@ -15,6 +15,7 @@ import androidx.car.app.SurfaceContainer
 class SurfaceRenderer(
     private val carContext: CarContext,
     private val onEditableTapped: () -> Unit,
+    private val onVideoControl: (VideoControl) -> Unit,
 ) : SurfaceCallback {
 
     private sealed interface Content {
@@ -98,9 +99,15 @@ class SurfaceRenderer(
 
     fun enterText(text: String) = presentation?.enterText(text)
 
-    fun pause() = presentation?.pause()
+    fun pause() {
+        presentation?.pause()
+        presentation?.setVideoPaused(true)
+    }
 
-    fun resume() = presentation?.resume()
+    fun resume() {
+        presentation?.resume()
+        presentation?.setVideoPaused(false)
+    }
 
     fun release() {
         presentation?.dismiss()
@@ -113,7 +120,7 @@ class SurfaceRenderer(
         presentation?.dismiss()
         presentation = null
         val display = virtualDisplay?.display ?: return
-        presentation = SurfacePresentation(carContext, display, dark, surfaceWidth, surfaceHeight, onEditableTapped).also {
+        presentation = SurfacePresentation(carContext, display, dark, surfaceWidth, surfaceHeight, onEditableTapped, onVideoControl).also {
             it.show()
             visibleArea?.let(it::setVisibleArea)
         }

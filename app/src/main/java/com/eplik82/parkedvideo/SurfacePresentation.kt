@@ -6,6 +6,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -22,6 +23,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
@@ -36,6 +39,8 @@ class SurfacePresentation(
     private val surfaceHeight: Int,
     /** Kutsutakse, kui puudutus viis fookuse veebilehe tekstiväljale. */
     private val onEditableTapped: () -> Unit,
+    /** Video oma nupud paremas servas: paus/esita ja tagasi. */
+    private val onVideoControl: (VideoControl) -> Unit,
 ) : Presentation(
     context,
     display,
@@ -48,6 +53,11 @@ class SurfacePresentation(
     private lateinit var root: FrameLayout
     private lateinit var message: TextView
     private lateinit var homeBackground: HomeBackgroundView
+    private lateinit var frame: FrameLayout
+    private lateinit var videoControls: LinearLayout
+    private lateinit var pauseButton: ImageView
+    private var videoMode = false
+    private val hideControls = Runnable { videoControls.visibility = View.GONE }
     private var webView: WebView? = null
 
     /** YouTube'i jms täisekraanivaade (WebChromeClient.onShowCustomView). */
@@ -62,7 +72,7 @@ class SurfacePresentation(
         super.onCreate(savedInstanceState)
         window?.setBackgroundDrawable(ColorDrawable(backgroundColor))
         // Taust katab kogu pinna (ka nuppude ala), sisu (root) jääb nähtavasse alasse.
-        val frame = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
+        frame = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
         homeBackground = HomeBackgroundView(context, dark)
         frame.addView(homeBackground, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         root = FrameLayout(context)
@@ -79,6 +89,23 @@ class SurfacePresentation(
         }
         root.addView(message, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        // Video nupud paremas servas keskel üksteise all (Android Auto nupud oleksid
+        // ülal paremal YouTube'i seadete nupu peal).
+        val buttonSize = (surfaceHeight * 0.14f).toInt().coerceAtLeast(64)
+        videoControls = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+        pauseButton = controlButton(R.drawable.ic_car_pause) { onVideoControl(VideoControl.TOGGLE_PAUSE) }
+        val backButton = controlButton(R.drawable.ic_car_back) { onVideoControl(VideoControl.BACK) }
+        videoControls.addView(pauseButton, LinearLayout.LayoutParams(buttonSize, buttonSize).apply {
+            bottomMargin = buttonSize / 4
+        })
+        videoControls.addView(backButton, LinearLayout.LayoutParams(buttonSize, buttonSize))
+        frame.addView(videoControls, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+            Gravity.END or Gravity.CENTER_VERTICAL,
+        ).apply { marginEnd = buttonSize / 3 })
         setContentView(frame)
     }
 
@@ -110,7 +137,43 @@ class SurfacePresentation(
         applyPadding()
     }
 
+    private fun controlButton(icon: Int, onClick: () -> Unit) = ImageView(context).apply {
+        setImageResource(icon)
+        scaleType = ImageView.ScaleType.CENTER_INSIDE
+        val pad = (surfaceHeight * 0.035f).toInt()
+        setPadding(pad, pad, pad, pad)
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.argb(170, 32, 33, 36))
+        }
+        setOnClickListener {
+            onClick()
+            showVideoControls()
+        }
+    }
+
+    /** Näitab video nuppe ja peidab need 4 s pärast (nagu Android Auto omad). */
+    private fun showVideoControls() {
+        if (!videoMode) return
+        videoControls.visibility = View.VISIBLE
+        handler.removeCallbacks(hideControls)
+        handler.postDelayed(hideControls, CONTROLS_VISIBLE_MILLIS)
+    }
+
+    fun setVideoPaused(paused: Boolean) {
+        pauseButton.setImageResource(if (paused) R.drawable.ic_car_play else R.drawable.ic_car_pause)
+    }
+
+    private fun setVideoMode(value: Boolean) {
+        videoMode = value
+        if (!value) {
+            handler.removeCallbacks(hideControls)
+            videoControls.visibility = View.GONE
+        }
+    }
+
     fun showMessage(text: String) {
+        setVideoMode(false)
         setFullBleed(false)
         destroyWebView()
         message.text = text
@@ -122,12 +185,15 @@ class SurfacePresentation(
         val origin = "https://${context.packageName}"
         // Video kogu ekraanile; Android Auto nupud hõljuvad peal ja peituvad ise.
         setFullBleed(true)
+        setVideoMode(true)
+        setVideoPaused(false)
         newWebView().loadDataWithBaseURL(origin, playerHtml(videoId, origin), "text/html", "utf-8", null)
     }
 
     fun showWeb(url: String) {
         // Ka brauser kogu ekraanile; nupud hõljuvad peal ja peituvad ise.
         setFullBleed(true)
+        setVideoMode(false)
         newWebView().loadUrl(url)
     }
 
@@ -153,9 +219,11 @@ class SurfacePresentation(
         for (action in intArrayOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
             val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
             event.source = InputDevice.SOURCE_TOUCHSCREEN
-            root.dispatchTouchEvent(event)
+            // frame, et ka video oma nupud puudutuse saaksid.
+            frame.dispatchTouchEvent(event)
             event.recycle()
         }
+        showVideoControls()
         // Kui puudutus viib fookuse tekstiväljale (ka veidi hiljem, nt Google'i
         // otsingukast), on vaja auto klaviatuuri.
         lastTapAt = SystemClock.uptimeMillis()
@@ -265,6 +333,7 @@ class SurfacePresentation(
     }
 
     private companion object {
+        const val CONTROLS_VISIBLE_MILLIS = 4_000L
         const val BRIDGE = "ParkedVideoInput"
         const val FOCUS_WATCH_MILLIS = 1_500L
 
@@ -316,9 +385,7 @@ class SurfacePresentation(
         <!DOCTYPE html>
         <html><head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
-        iframe{border:0;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-          width:min(100vw,177.78vh);height:min(100vh,56.25vw)}</style>
+        <style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style>
         </head><body>
         <iframe id="p"
           src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&enablejsapi=1&origin=$origin"
@@ -333,3 +400,6 @@ class SurfacePresentation(
         </body></html>
     """.trimIndent()
 }
+
+/** Video oma nupud auto ekraanil. */
+enum class VideoControl { TOGGLE_PAUSE, BACK }

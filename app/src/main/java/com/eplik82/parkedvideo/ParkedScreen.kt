@@ -30,7 +30,16 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     private enum class Mode { IDLE, VIDEO, WEB }
 
     private val settings = AppSettings(carContext)
-    private val renderer = SurfaceRenderer(carContext, onEditableTapped = { openKeyboard() })
+    private val renderer = SurfaceRenderer(
+        carContext,
+        onEditableTapped = { openKeyboard() },
+        onVideoControl = { control ->
+            when (control) {
+                VideoControl.TOGGLE_PAUSE -> togglePause()
+                VideoControl.BACK -> close()
+            }
+        },
+    )
     private val monitor = ParkingMonitor(
         carContext,
         stationaryMillis = { settings.stationarySeconds * 1000L },
@@ -96,14 +105,8 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         val template = NavigationTemplate.Builder()
         when {
             mode == Mode.VIDEO -> {
-                // Paus ja Tagasi paremas servas keskel üksteise all (map action strip),
-                // et need ei kataks YouTube'i nuppe ülal paremal.
-                template.setMapActionStrip(
-                    ActionStrip.Builder()
-                        .addAction(iconAction(if (paused) R.drawable.ic_car_play else R.drawable.ic_car_pause) { togglePause() })
-                        .addAction(iconAction(R.drawable.ic_car_back) { close() })
-                        .build()
-                )
+                // Paus ja Tagasi joonistab rakendus ise paremasse serva keskele
+                // (SurfacePresentation), et need ei kataks YouTube'i nuppe ülal paremal.
                 // Ülemine riba on kohustuslik – sinna ainult väike infoikoon.
                 actions.addAction(iconAction(R.drawable.ic_car_info) { screenManager.push(CarInfoScreen(carContext)) })
             }
