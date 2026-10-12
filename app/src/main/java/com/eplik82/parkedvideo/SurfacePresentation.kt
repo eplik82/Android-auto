@@ -71,8 +71,21 @@ class SurfacePresentation(
         setContentView(root)
     }
 
-    /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale. */
+    /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale (v.a video, mis täidab kogu ekraani). */
     fun setVisibleArea(area: Rect) {
+        visibleArea = area
+        applyPadding()
+    }
+
+    private var visibleArea: Rect? = null
+    private var fullBleed = false
+
+    private fun applyPadding() {
+        val area = visibleArea
+        if (fullBleed || area == null) {
+            root.setPadding(0, 0, 0, 0)
+            return
+        }
         root.setPadding(
             area.left,
             area.top,
@@ -81,7 +94,13 @@ class SurfacePresentation(
         )
     }
 
+    private fun setFullBleed(value: Boolean) {
+        fullBleed = value
+        applyPadding()
+    }
+
     fun showMessage(text: String) {
+        setFullBleed(false)
         destroyWebView()
         message.text = text
         message.visibility = View.VISIBLE
@@ -89,10 +108,13 @@ class SurfacePresentation(
 
     fun showVideo(videoId: String) {
         val origin = "https://${context.packageName}"
+        // Video kogu ekraanile; Android Auto nupud hõljuvad peal ja peituvad ise.
+        setFullBleed(true)
         newWebView().loadDataWithBaseURL(origin, playerHtml(videoId, origin), "text/html", "utf-8", null)
     }
 
     fun showWeb(url: String) {
+        setFullBleed(false)
         newWebView().loadUrl(url)
     }
 
