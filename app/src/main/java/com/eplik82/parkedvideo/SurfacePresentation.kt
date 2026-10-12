@@ -47,6 +47,10 @@ class SurfacePresentation(
     private lateinit var root: FrameLayout
     private lateinit var message: TextView
     private var webView: WebView? = null
+
+    /** YouTube'i jms täisekraanivaade (WebChromeClient.onShowCustomView). */
+    private var fullscreenView: View? = null
+    private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,6 +93,10 @@ class SurfacePresentation(
     }
 
     fun goBack() {
+        if (fullscreenView != null) {
+            exitFullscreen()
+            return
+        }
         webView?.takeIf { it.canGoBack() }?.goBack()
     }
 
@@ -155,7 +163,19 @@ class SurfacePresentation(
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
                 request.url.scheme !in setOf("http", "https")
         }
-        view.webChromeClient = WebChromeClient()
+        view.webChromeClient = object : WebChromeClient() {
+            override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                if (fullscreenView != null) {
+                    callback.onCustomViewHidden()
+                    return
+                }
+                fullscreenView = view
+                fullscreenCallback = callback
+                root.addView(view, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+            }
+
+            override fun onHideCustomView() = exitFullscreen()
+        }
         root.addView(view, 0, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         webView = view
         return view
@@ -176,7 +196,16 @@ class SurfacePresentation(
         }
     }
 
+    private fun exitFullscreen() {
+        val view = fullscreenView ?: return
+        fullscreenView = null
+        root.removeView(view)
+        fullscreenCallback?.onCustomViewHidden()
+        fullscreenCallback = null
+    }
+
     private fun destroyWebView() {
+        exitFullscreen()
         val view = webView ?: return
         webView = null
         view.loadUrl("about:blank")
@@ -227,7 +256,7 @@ class SurfacePresentation(
         </head><body>
         <iframe id="p"
           src="https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1&enablejsapi=1&origin=$origin"
-          allow="autoplay; encrypted-media; picture-in-picture"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen
           referrerpolicy="strict-origin-when-cross-origin"></iframe>
         <script>
           function cmd(f) {
