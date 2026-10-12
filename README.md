@@ -58,6 +58,14 @@ Android Auto ei anna rakendustele käigu- ega seisupiduri infot, seega
 otsustatakse pargitud olek ainult kiiruse järgi. Kasuta rakendust ainult
 päriselt pargitud autos.
 
+## Avaekraani taust
+
+Auto ekraani avalehel on koodiga joonistatud Ioniq 5 stiilis taust
+(külgvaade, „parametric pixel“ tuled). Oma pildi kasutamiseks pane see
+telefoni faili `Android/data/com.eplik82.parkedvideo/files/background.jpg`
+(või `.png`), nt `adb push pilt.jpg /sdcard/Android/data/com.eplik82.parkedvideo/files/background.jpg`.
+Pilt lõigatakse ekraani mõõtu; Hyundai fotosid repos pole (avalik repo).
+
 ## Testimine
 
 Telefoni seadete all on nupud **„Telefon liigub“**, **„Telefon seisab“** ja

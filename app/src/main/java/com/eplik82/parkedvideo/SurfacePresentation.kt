@@ -47,6 +47,7 @@ class SurfacePresentation(
 
     private lateinit var root: FrameLayout
     private lateinit var message: TextView
+    private lateinit var homeBackground: HomeBackgroundView
     private var webView: WebView? = null
 
     /** YouTube'i jms täisekraanivaade (WebChromeClient.onShowCustomView). */
@@ -60,15 +61,25 @@ class SurfacePresentation(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window?.setBackgroundDrawable(ColorDrawable(backgroundColor))
-        root = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
+        // Taust katab kogu pinna (ka nuppude ala), sisu (root) jääb nähtavasse alasse.
+        val frame = FrameLayout(context).apply { setBackgroundColor(backgroundColor) }
+        homeBackground = HomeBackgroundView(context, dark)
+        frame.addView(homeBackground, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        root = FrameLayout(context)
         message = TextView(context).apply {
             setTextColor(textColor)
             textSize = 26f
-            gravity = Gravity.CENTER
-            setPadding(48, 48, 48, 48)
+            gravity = Gravity.CENTER_VERTICAL or Gravity.START
+            setShadowLayer(8f, 0f, 2f, if (dark) Color.BLACK else Color.WHITE)
+            // Parem pool jääb taustal olevale autole.
+            addOnLayoutChangeListener { v, left, _, right, _, _, _, _, _ ->
+                val rightPad = ((right - left) * 0.48f).toInt()
+                if (v.paddingRight != rightPad) v.setPadding(64, 48, rightPad, 48)
+            }
         }
         root.addView(message, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-        setContentView(root)
+        frame.addView(root, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+        setContentView(frame)
     }
 
     /** Jätab vaba ruumi Android Auto nuppudele ja olekuribale (v.a video, mis täidab kogu ekraani). */
@@ -104,6 +115,7 @@ class SurfacePresentation(
         destroyWebView()
         message.text = text
         message.visibility = View.VISIBLE
+        homeBackground.visibility = View.VISIBLE
     }
 
     fun showVideo(videoId: String) {
@@ -188,6 +200,7 @@ class SurfacePresentation(
     private fun newWebView(): WebView {
         destroyWebView()
         message.visibility = View.GONE
+        homeBackground.visibility = View.GONE
         val view = WebView(context)
         view.setBackgroundColor(backgroundColor)
         view.settings.javaScriptEnabled = true
