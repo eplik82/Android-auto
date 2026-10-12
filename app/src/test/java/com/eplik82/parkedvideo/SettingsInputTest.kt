@@ -7,6 +7,7 @@ import org.junit.Test
 class SettingsInputTest {
     @Test
     fun acceptsStationarySecondsWithinRange() {
+        assertEquals(1, SettingsInput.parseStationarySeconds("1"))
         assertEquals(30, SettingsInput.parseStationarySeconds("30"))
         assertEquals(90, SettingsInput.parseStationarySeconds(" 90 "))
         assertEquals(600, SettingsInput.parseStationarySeconds("600"))
@@ -16,7 +17,6 @@ class SettingsInputTest {
     fun rejectsStationarySecondsOutsideRange() {
         assertNull(SettingsInput.parseStationarySeconds(""))
         assertNull(SettingsInput.parseStationarySeconds("0"))
-        assertNull(SettingsInput.parseStationarySeconds("29"))
         assertNull(SettingsInput.parseStationarySeconds("601"))
         assertNull(SettingsInput.parseStationarySeconds("-5"))
         assertNull(SettingsInput.parseStationarySeconds("abc"))

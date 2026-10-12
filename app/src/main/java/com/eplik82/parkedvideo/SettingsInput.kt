@@ -3,7 +3,7 @@ package com.eplik82.parkedvideo
 /** Telefoni seadetes sisestatud väärtuste kontroll. */
 object SettingsInput {
     /** Alampiir hoiab ära video avanemise tavalise foori- või ummikupeatuse ajal. */
-    const val MIN_STATIONARY_SECONDS = 30
+    const val MIN_STATIONARY_SECONDS = 1
     const val MAX_STATIONARY_SECONDS = 600
     const val DEFAULT_STATIONARY_SECONDS = 30
     const val DEFAULT_HOME_URL = "https://www.google.com"

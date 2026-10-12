@@ -8,7 +8,7 @@ sirvida veebi auto ekraanilt, **kuid ainult siis, kui auto on pargitud**.
 - Telefonis valitakse video: kleebi link rakendusse „Pargitud video“ või
   jaga see YouTube'ist (Jaga → Pargitud video).
 - Auto ekraanil ilmuvad nupud „Video“ ja „Brauser“ alles siis, kui auto on
-  seadetes määratud aja (vaikimisi **30 s**, lubatud 30–600 s) katkematult
+  seadetes määratud aja (vaikimisi **30 s**, lubatud 1–600 s) katkematult
   paigal seisnud. Lühike peatus, näiteks foori taga, neid ei ava.
 - Brauser avab seadetes määratud avalehe. Lehel saab puudutada linke ja
   kerida, nupp „Tagasi“ liigub eelmisele lehele. Teksti saab sisestada ainult
@@ -50,7 +50,7 @@ Android Auto loendit lühendada.
 | YouTube'i video | Link või video ID; saab ka YouTube'ist jagada |
 | Brauseri avaleht | Nt `www.google.com` |
 | Kiiruse allikas | Auto või telefoni GPS (vt eespool) |
-| Paigalseismise aeg | 30–600 sekundit enne video/brauseri lubamist |
+| Paigalseismise aeg | 1–600 sekundit enne video/brauseri lubamist |
 | Päeva/öö režiim | Automaatne (auto järgi, nt esitulede sisselülitamisel), Päev või Öö. Mõjutab auto ekraani teateid, veebilehti (tume teema toega lehed) ja telefoni seadete vaadet |
 
 Android Auto ei anna rakendustele käigu- ega seisupiduri infot, seega
