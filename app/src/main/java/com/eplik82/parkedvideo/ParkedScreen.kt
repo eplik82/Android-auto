@@ -28,7 +28,7 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     private enum class Mode { IDLE, VIDEO, WEB }
 
     private val settings = AppSettings(carContext)
-    private val renderer = SurfaceRenderer(carContext)
+    private val renderer = SurfaceRenderer(carContext, onEditableTapped = { openKeyboard() })
     private val monitor = ParkingMonitor(
         carContext,
         stationaryMillis = { settings.stationarySeconds * 1000L },
@@ -90,6 +90,7 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
             }
             mode == Mode.WEB -> {
                 actions.addAction(action(R.string.car_back) { renderer.goBack() })
+                actions.addAction(action(R.string.car_text) { openKeyboard() })
                 actions.addAction(action(R.string.car_close) { close() })
                 // PAN lubab lehte auto ekraanil kerida.
                 template.setMapActionStrip(ActionStrip.Builder().addAction(Action.PAN).build())
@@ -136,6 +137,7 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         if (monitor.state != ParkingState.PARKED) {
             mode = Mode.IDLE
             paused = false
+            if (screenManager.top is TextInputScreen) screenManager.pop()
         }
         refresh()
     }
@@ -164,6 +166,14 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
         mode = Mode.WEB
         renderer.openWeb(settings.homeUrl)
         invalidate()
+    }
+
+    /** Auto klaviatuur: tekst läheb aktiivsele väljale või aadressiribale. */
+    private fun openKeyboard() {
+        if (mode != Mode.WEB || screenManager.top !== this) return
+        screenManager.push(TextInputScreen(carContext) { text ->
+            if (mode == Mode.WEB) renderer.enterText(text)
+        })
     }
 
     private fun togglePause() {

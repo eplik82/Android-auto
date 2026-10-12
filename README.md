@@ -11,8 +11,9 @@ sirvida veebi auto ekraanilt, **kuid ainult siis, kui auto on pargitud**.
   seadetes määratud aja (vaikimisi **30 s**, lubatud 1–600 s) katkematult
   paigal seisnud. Lühike peatus, näiteks foori taga, neid ei ava.
 - Brauser avab seadetes määratud avalehe. Lehel saab puudutada linke ja
-  kerida, nupp „Tagasi“ liigub eelmisele lehele. Teksti saab sisestada ainult
-  telefonis (avalehe aadress), sest auto ekraanil klaviatuuri pole.
+  kerida, nupp „Tagasi“ liigub eelmisele lehele. Tekstivälja puudutamisel (või
+  nupuga „Tekst“) avaneb auto klaviatuur ja tekst läheb sellele väljale;
+  ilma valitud väljata avatakse sisestatud aadress või Google'i otsing.
 - Kui auto hakkab liikuma (üle ~1 km/h), suletakse video või brauser kohe
   koos heliga. Uuesti pargituna tuleb need jälle käsitsi avada.
 - Kui auto kiiruseandmeid pole või luba puudub, midagi ei näidata.

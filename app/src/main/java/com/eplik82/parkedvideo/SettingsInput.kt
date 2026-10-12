@@ -1,5 +1,7 @@
 package com.eplik82.parkedvideo
 
+import java.net.URLEncoder
+
 /** Telefoni seadetes sisestatud väärtuste kontroll. */
 object SettingsInput {
     /** Alampiir hoiab ära video avanemise tavalise foori- või ummikupeatuse ajal. */
@@ -22,4 +24,8 @@ object SettingsInput {
         if (host.isEmpty() || '.' !in host) return null
         return url
     }
+
+    /** Auto klaviatuurilt sisestatud tekst: veebiaadress või muidu Google'i otsing. */
+    fun addressOrSearch(text: String): String =
+        normalizeUrl(text) ?: ("https://www.google.com/search?q=" + URLEncoder.encode(text.trim(), "UTF-8"))
 }

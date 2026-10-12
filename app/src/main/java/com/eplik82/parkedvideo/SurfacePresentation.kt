@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
@@ -22,6 +24,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONObject
 
 /** Auto ekraani pinnale joonistatav sisu: teade, YouTube'i mängija või veebileht. */
 class SurfacePresentation(
@@ -30,6 +33,8 @@ class SurfacePresentation(
     private val dark: Boolean,
     private val surfaceWidth: Int,
     private val surfaceHeight: Int,
+    /** Kutsutakse, kui puudutus viis fookuse veebilehe tekstiväljale. */
+    private val onEditableTapped: () -> Unit,
 ) : Presentation(
     context,
     display,
@@ -42,6 +47,7 @@ class SurfacePresentation(
     private lateinit var root: FrameLayout
     private lateinit var message: TextView
     private var webView: WebView? = null
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,9 +109,28 @@ class SurfacePresentation(
             root.dispatchTouchEvent(event)
             event.recycle()
         }
+        // Kui puudutati tekstivälja, on vaja auto klaviatuuri.
+        val view = webView ?: return
+        handler.postDelayed({
+            if (webView === view) {
+                view.evaluateJavascript(IS_EDITABLE_JS) { if (it == "true") onEditableTapped() }
+            }
+        }, EDITABLE_CHECK_DELAY_MILLIS)
+    }
+
+    /**
+     * Kirjutab teksti aktiivsele tekstiväljale ja saadab vormi (nt otsingu).
+     * Kui ükski väli pole aktiivne, avab teksti aadressina või Google'i otsinguna.
+     */
+    fun enterText(text: String) {
+        val view = webView ?: return
+        view.evaluateJavascript("($INSERT_TEXT_JS)(${JSONObject.quote(text)})") { inserted ->
+            if (inserted != "true" && webView === view) view.loadUrl(SettingsInput.addressOrSearch(text))
+        }
     }
 
     override fun onStop() {
+        handler.removeCallbacksAndMessages(null)
         destroyWebView()
         super.onStop()
     }
@@ -157,6 +182,41 @@ class SurfacePresentation(
         view.loadUrl("about:blank")
         root.removeView(view)
         view.destroy()
+    }
+
+    private companion object {
+        const val EDITABLE_CHECK_DELAY_MILLIS = 300L
+
+        const val IS_EDITABLE_JS = """(function() {
+            var e = document.activeElement;
+            if (!e) return false;
+            if (e.isContentEditable || e.tagName == 'TEXTAREA') return true;
+            return e.tagName == 'INPUT' &&
+                /^(text|search|email|url|tel|number|password|)$/i.test(e.getAttribute('type') || '');
+        })()"""
+
+        /** Seab välja väärtuse nii, et ka Reacti jms raamistike lehed selle märkaksid, ja saadab vormi. */
+        const val INSERT_TEXT_JS = """function(t) {
+            var e = document.activeElement;
+            if (!e || !(e.isContentEditable || e.tagName == 'INPUT' || e.tagName == 'TEXTAREA')) return false;
+            if (e.isContentEditable) {
+                document.execCommand('insertText', false, t);
+            } else {
+                var setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), 'value').set;
+                setter.call(e, t);
+            }
+            e.dispatchEvent(new Event('input', {bubbles: true}));
+            e.dispatchEvent(new Event('change', {bubbles: true}));
+            if (e.tagName == 'TEXTAREA' || e.isContentEditable) return true;
+            if (e.form) {
+                if (e.form.requestSubmit) e.form.requestSubmit(); else e.form.submit();
+            } else {
+                ['keydown', 'keypress', 'keyup'].forEach(function(type) {
+                    e.dispatchEvent(new KeyboardEvent(type, {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true}));
+                });
+            }
+            return true;
+        }"""
     }
 
     private fun playerHtml(videoId: String, origin: String) = """

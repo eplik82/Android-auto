@@ -54,6 +54,9 @@
     <string name="car_stop">Stopp</string>
     <string name="car_back">Tagasi</string>
     <string name="car_close">Sulge</string>
+    <string name="car_text">Tekst</string>
+    <string name="car_text_hint">Tekst, aadress või otsing</string>
+    <string name="car_text_info">Kirjuta tekst ja vajuta klaviatuuril otsingunuppu. Kui lehel on tekstiväli valitud, läheb tekst sinna, muidu avatakse aadress või Google\'i otsing.</string>
     <string name="car_locked">Ainult pargitult</string>
     <string name="car_locked_toast">Video ja brauser on lubatud ainult siis, kui auto on pargitud.</string>
     <string name="car_no_video_toast">Vali telefonis rakenduses „Pargitud video“ YouTube\'i video.</string>

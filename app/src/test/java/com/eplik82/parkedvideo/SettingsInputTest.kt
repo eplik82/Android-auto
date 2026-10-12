@@ -31,6 +31,13 @@ class SettingsInputTest {
     }
 
     @Test
+    fun addressOrSearch() {
+        assertEquals("https://err.ee", SettingsInput.addressOrSearch("err.ee"))
+        assertEquals("https://www.google.com/search?q=ilm+tallinn", SettingsInput.addressOrSearch(" ilm tallinn "))
+        assertEquals("https://www.google.com/search?q=%C3%B5un", SettingsInput.addressOrSearch("õun"))
+    }
+
+    @Test
     fun rejectsNonWebAddresses() {
         assertNull(SettingsInput.normalizeUrl(""))
         assertNull(SettingsInput.normalizeUrl("google"))
