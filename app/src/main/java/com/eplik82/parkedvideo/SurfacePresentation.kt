@@ -16,6 +16,7 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -52,6 +53,9 @@ class SurfacePresentation(
     private var fullscreenView: View? = null
     private var fullscreenCallback: WebChromeClient.CustomViewCallback? = null
     private val handler = Handler(Looper.getMainLooper())
+
+    /** Viimase auto ekraani puudutuse aeg; leht saab klaviatuuri avada ainult vahetult pärast seda. */
+    private var lastTapAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,13 +121,23 @@ class SurfacePresentation(
             root.dispatchTouchEvent(event)
             event.recycle()
         }
-        // Kui puudutati tekstivälja, on vaja auto klaviatuuri.
-        val view = webView ?: return
-        handler.postDelayed({
-            if (webView === view) {
-                view.evaluateJavascript(IS_EDITABLE_JS) { if (it == "true") onEditableTapped() }
+        // Kui puudutus viib fookuse tekstiväljale (ka veidi hiljem, nt Google'i
+        // otsingukast), on vaja auto klaviatuuri.
+        lastTapAt = SystemClock.uptimeMillis()
+        webView?.evaluateJavascript(WATCH_FOCUS_JS, null)
+    }
+
+    /** Lehe JavaScripti teade: puudutus viis fookuse tekstiväljale. */
+    private inner class InputBridge {
+        @JavascriptInterface
+        fun onEditableFocused() {
+            handler.post {
+                if (SystemClock.uptimeMillis() - lastTapAt <= FOCUS_WATCH_MILLIS) {
+                    lastTapAt = 0L
+                    onEditableTapped()
+                }
             }
-        }, EDITABLE_CHECK_DELAY_MILLIS)
+        }
     }
 
     /**
@@ -158,6 +172,7 @@ class SurfacePresentation(
         view.settings.domStorageEnabled = true
         view.settings.mediaPlaybackRequiresUserGesture = false
         applyDarkMode(view)
+        view.addJavascriptInterface(InputBridge(), BRIDGE)
         view.webViewClient = object : WebViewClient() {
             // Ainult veebilehed: intent:// jms ei tohi telefonis teisi rakendusi avada.
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
@@ -214,14 +229,27 @@ class SurfacePresentation(
     }
 
     private companion object {
-        const val EDITABLE_CHECK_DELAY_MILLIS = 300L
+        const val BRIDGE = "ParkedVideoInput"
+        const val FOCUS_WATCH_MILLIS = 1_500L
 
-        const val IS_EDITABLE_JS = """(function() {
-            var e = document.activeElement;
-            if (!e) return false;
-            if (e.isContentEditable || e.tagName == 'TEXTAREA') return true;
-            return e.tagName == 'INPUT' &&
-                /^(text|search|email|url|tel|number|password|)$/i.test(e.getAttribute('type') || '');
+        /** Kontrollib kohe ja veel 1,5 s jooksul, kas fookus on tekstiväljal. */
+        val WATCH_FOCUS_JS = """(function() {
+            function editable(e) {
+                if (!e) return false;
+                if (e.isContentEditable || e.tagName == 'TEXTAREA') return true;
+                return e.tagName == 'INPUT' &&
+                    /^(text|search|email|url|tel|number|password|)$/i.test(e.getAttribute('type') || '');
+            }
+            function report() { $BRIDGE.onEditableFocused(); }
+            if (window.__pvFocus) document.removeEventListener('focusin', window.__pvFocus, true);
+            window.__pvFocus = function(ev) {
+                if (editable(ev.target)) {
+                    document.removeEventListener('focusin', window.__pvFocus, true);
+                    report();
+                }
+            };
+            document.addEventListener('focusin', window.__pvFocus, true);
+            setTimeout(function() { document.removeEventListener('focusin', window.__pvFocus, true); }, $FOCUS_WATCH_MILLIS);
         })()"""
 
         /** Seab välja väärtuse nii, et ka Reacti jms raamistike lehed selle märkaksid, ja saadab vormi. */
