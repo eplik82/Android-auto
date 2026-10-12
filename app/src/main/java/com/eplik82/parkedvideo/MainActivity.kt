@@ -1,7 +1,6 @@
 package com.eplik82.parkedvideo
 
 import android.app.Activity
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
@@ -53,7 +52,13 @@ class MainActivity : Activity() {
             loadFields()
             requestMissingPermissions()
         }
-        handleShare(intent)
+    }
+
+    /** Video võidi vahepeal YouTube'ist jagada (ShareActivity) – näita seda, et „Salvesta“ seda üle ei kirjutaks. */
+    override fun onResume() {
+        super.onResume()
+        val shared = settings.videoId?.let { "https://youtu.be/$it" }.orEmpty()
+        if (YouTubeIds.parse(videoInput.text.toString()) != settings.videoId) videoInput.setText(shared)
     }
 
     /**
@@ -65,11 +70,6 @@ class MainActivity : Activity() {
             if (settings.speedSource == SpeedSourceType.GPS) SpeedSourceType.GPS.permissions else emptyList()
         val missing = wanted.filterNot(::hasPermission)
         if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), REQUEST_PERMISSIONS)
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        handleShare(intent)
     }
 
     private fun loadFields() {
@@ -117,20 +117,6 @@ class MainActivity : Activity() {
                 SimulatedMotion.STATIONARY -> R.string.test_status_stationary
             }
         )
-    }
-
-    private fun handleShare(intent: Intent?) {
-        if (intent?.action != Intent.ACTION_SEND) return
-        val shared = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-        val id = YouTubeIds.parse(shared)
-        if (id == null) {
-            status.setText(R.string.setup_invalid_video)
-            return
-        }
-        settings.videoId = id
-        settings.requestPlay()
-        videoInput.setText("https://youtu.be/$id")
-        status.setText(R.string.setup_shared)
     }
 
     private fun save() {
