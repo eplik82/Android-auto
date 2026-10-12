@@ -29,7 +29,7 @@
 
     <!-- Testimine -->
     <string name="test_label">Testimine</string>
-    <string name="test_info">Testi rakendust ilma sõitmata, nt arvutis Android Auto emulaatoriga (DHU). „Telefon seisab“ kehtib ainult siis, kui auto päris kiirust ei anna – päris autos kehtib alati tegelik kiirus. Ka testis tuleb oodata määratud paigalseismise aeg.</string>
+    <string name="test_info">Testi rakendust ilma sõitmata, nt arvutis Android Auto emulaatoriga (DHU). Testnupud kehtivad alati – auto ja GPS-i kiirust testi ajal ei arvestata. „Telefon seisab“ ajal saab videot avada ka sõidu ajal, seega lõpeta test enne sõitu. Ka testis tuleb oodata määratud paigalseismise aeg.</string>
     <string name="test_moving">Telefon liigub</string>
     <string name="test_stationary">Telefon seisab</string>
     <string name="test_off">Lõpeta test</string>
@@ -69,8 +69,7 @@
     <string name="car_speed_kmh">%1$d km/h</string>
     <string name="car_speed_none">andmed puuduvad</string>
     <string name="car_test_moving">[Testrežiim: telefon liigub]</string>
-    <string name="car_test_stationary">[Testrežiim: telefon seisab]</string>
-    <string name="car_test_ignored">[Testrežiim „seisab“ ei kehti – auto annab päris kiiruse]</string>
+    <string name="car_test_stationary">[Testrežiim: telefon seisab – päris kiirust ei arvestata]</string>
 
     <!-- Auto info (diagnostika) -->
     <string name="car_info">Info</string>

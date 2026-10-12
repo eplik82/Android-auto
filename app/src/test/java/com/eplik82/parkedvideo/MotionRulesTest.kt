@@ -9,28 +9,23 @@ import org.junit.Test
 class MotionRulesTest {
     @Test
     fun withoutSimulationRealSpeedIsUsed() {
-        assertEquals(12f, MotionRules.effectiveSpeed(SimulatedMotion.OFF, 12f, speedAccess = true))
-        assertNull(MotionRules.effectiveSpeed(SimulatedMotion.OFF, null, speedAccess = true))
+        assertEquals(12f, MotionRules.effectiveSpeed(SimulatedMotion.OFF, 12f))
+        assertNull(MotionRules.effectiveSpeed(SimulatedMotion.OFF, null))
     }
 
     @Test
     fun simulatedMovingAlwaysWins() {
-        val parkedCar = MotionRules.effectiveSpeed(SimulatedMotion.MOVING, 0f, speedAccess = true)!!
+        val parkedCar = MotionRules.effectiveSpeed(SimulatedMotion.MOVING, 0f)!!
         assertFalse(MotionRules.isStationary(parkedCar, 0.3f))
-        val noData = MotionRules.effectiveSpeed(SimulatedMotion.MOVING, null, speedAccess = false)!!
+        val noData = MotionRules.effectiveSpeed(SimulatedMotion.MOVING, null)!!
         assertFalse(MotionRules.isStationary(noData, 1.0f))
     }
 
     @Test
-    fun simulatedStationaryNeverOverridesRealSpeed() {
-        assertEquals(15f, MotionRules.effectiveSpeed(SimulatedMotion.STATIONARY, 15f, speedAccess = true))
-    }
-
-    @Test
-    fun simulatedStationaryOnlyWithSpeedAccessAndNoRealData() {
-        assertEquals(0f, MotionRules.effectiveSpeed(SimulatedMotion.STATIONARY, null, speedAccess = true))
-        // Kiiruse loa keelamine ei tohi testrežiimi kaudu videot avada.
-        assertNull(MotionRules.effectiveSpeed(SimulatedMotion.STATIONARY, null, speedAccess = false))
+    fun simulatedStationaryIgnoresRealSpeed() {
+        // Emulaator (DHU) annab ise kiiruse – test peab seda eirama.
+        assertEquals(0f, MotionRules.effectiveSpeed(SimulatedMotion.STATIONARY, 15f))
+        assertEquals(0f, MotionRules.effectiveSpeed(SimulatedMotion.STATIONARY, null))
     }
 
     @Test

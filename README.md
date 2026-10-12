@@ -64,10 +64,10 @@ Telefoni seadete all on nupud **„Telefon liigub“**, **„Telefon seisab“**
 märge `[Testrežiim …]`.
 
 - „Telefon liigub“ kehtib alati: video või brauser sulgub kohe.
-- „Telefon seisab“ kehtib ainult siis, kui kiiruse luba on antud, aga auto
-  päris kiirust ei anna (nt arvutis Android Auto emulaatoriga DHU). Päris
-  autos kehtib alati tegelik kiirus, seega testnupuga ei saa sõidu ajal
-  videot avada. Ka testis tuleb oodata määratud paigalseismise aeg.
+- „Telefon seisab“ kehtib samuti alati: auto ja GPS-i kiirust (ka
+  emulaatori DHU antud kiirust) testi ajal ei arvestata. Seetõttu saab
+  testi ajal videot avada ka sõites – vajuta enne sõitu „Lõpeta test“.
+  Ka testis tuleb oodata määratud paigalseismise aeg.
 
 ## Paigaldamine
 

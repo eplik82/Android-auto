@@ -198,7 +198,6 @@ class ParkedScreen(carContext: CarContext) : Screen(carContext) {
     }
 
     private fun simulationNote(): String = when {
-        monitor.simulationIgnored -> "\n\n" + carContext.getString(R.string.car_test_ignored)
         monitor.simulation == SimulatedMotion.MOVING -> "\n\n" + carContext.getString(R.string.car_test_moving)
         monitor.simulation == SimulatedMotion.STATIONARY -> "\n\n" + carContext.getString(R.string.car_test_stationary)
         else -> ""
